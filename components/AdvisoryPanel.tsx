@@ -49,10 +49,10 @@ export default function AdvisoryPanel({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.8, delay: 1.2 }}
-      className={`${open ? "w-64" : "w-auto"} max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 p-2.5 shadow-xl backdrop-blur-md sm:p-3`}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.3 }}
+      className="w-full rounded-lg border border-white/10 bg-white/5 p-2.5"
     >
       <div className="flex items-center justify-between gap-2">
         <button className="flex items-center gap-2" onClick={() => setOpen((v) => !v)}>

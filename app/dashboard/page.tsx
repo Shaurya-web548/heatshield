@@ -383,16 +383,14 @@ export default function DashboardPage() {
                   onSelect={(r) => selectZone(r, true)}
                   onHover={setHoveredId}
                 />
-                {selected && (
-                  <ExplainCard risk={selected} onClose={() => setSelectedId(null)} />
-                )}
-                {!selected && (
-                  <div className="mt-2 text-[10px] text-neutral-500">
-                    Observation {formatHour(hour)} IST · click a row or a zone for the
-                    factors beneath its score · click anywhere on the map for the risk
-                    at that spot
-                  </div>
-                )}
+                <div className="mt-2.5">
+                  <AdvisoryPanel advisory={advisory} hourLabel={formatHour(hour)} liveDot={isLive} />
+                </div>
+                <div className="mt-2 text-[10px] text-neutral-500">
+                  Observation {formatHour(hour)} IST · click a row or a zone — its HRI
+                  breakdown appears on the right · click anywhere on the map for the
+                  risk at that spot
+                </div>
               </>
             )}
           </>
@@ -462,7 +460,15 @@ export default function DashboardPage() {
         className="absolute right-3 top-[86px] z-[1010] flex max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-start justify-end gap-2 sm:top-5 sm:right-5 sm:z-[1000] sm:max-h-[calc(100vh-110px)] sm:max-w-none sm:flex-col sm:items-end sm:gap-3 sm:overflow-y-auto"
       >
         <BulletinCard city={city} hour={hour} risks={risks} lastUpdated={lastUpdated} />
-        <AdvisoryPanel advisory={advisory} hourLabel={formatHour(hour)} liveDot={isLive} />
+        <div className="w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 px-3 pb-3 pt-2.5 shadow-xl backdrop-blur-md">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+            📐 Heat-Risk Index · {selected ? "selected zone" : "top hotspot"}
+          </div>
+          <ExplainCard
+            risk={selected ?? risks[0]}
+            onClose={() => setSelectedId(null)}
+          />
+        </div>
       </Enter>
 
       {pinRisk && pinCooling && (
