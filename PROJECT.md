@@ -43,19 +43,24 @@ official ward boundaries.
 
 ## Demo script (~90 seconds)
 
-1. Ahmedabad, 06:00, all green. Press PLAY DAY.
-2. By 11:00 the old city turns yellow; at 13:00 Kalupur bursts red —
-   "🔥 Kalupur (old city) is now CRITICAL — ward officer notified".
-3. Click Kalupur: "Why is Kalupur CRITICAL? 44 °C IMD + 3.3 built-up + 2.3
-   concrete + 1.1 traffic − 0.2 trees = 50 °C feels-like." Then click Bopal
-   (tree cover 25 %) — two zones, same IMD number, 20 HRI points apart.
-4. Click a street: point risk 84 CRITICAL, "Stop outdoor work… nearest
-   relief: Manek Chowk ORS point, 2.3 km".
-5. Toggle हिन्दी on the worker advisory.
-6. 🛡️ Authority → sign in → dispatch a water tanker to Kalupur → advance to
-   ON SITE → show the alert→dispatch KPI and export the CSV.
-7. ⚗️ What-if: green Kalupur +40 % → HRI 80 → 73. "This is what a tree
-   budget buys."
+1. **Landing page** — embers drift toward the cursor; "See the hotspots
+   before they become incidents." Click *Continue as resident / worker*.
+2. **Hotspot dashboard** — Ahmedabad at the 14:30 IST observation: the old
+   city and industrial belts are red, tree-rich Bopal is lowest. Click
+   Kalupur → the factors beneath its score: heat index +20, surface temp
+   +19, tree deficit +19, built-up +14, traffic +11 = 84 CRITICAL. Click
+   Bopal — same IMD number, 20 points apart.
+3. **📐 Heat-Risk Index** — the formula, the weights, the normalization, and
+   every zone's score with factor bars beneath it.
+4. Click a street on the map: point risk, "Stop outdoor work… nearest
+   relief: Manek Chowk ORS point, 2.3 km". Toggle हिन्दी on the advisory.
+5. **🔔 Threshold alerts** — each High/Critical zone with who was notified
+   (ward officer, health centre, traffic control).
+6. **🛡️ Response tracking** — as a resident: "no relief dispatched yet for
+   Kalupur". Sign in as authority → dispatch a water tanker → advance to ON
+   SITE → switch back to the resident view: the alert shows *acknowledged*,
+   the ticket timeline shows dispatch → on site, stamped by officer and
+   time. Export the CSV.
 
 ## Honest limitations
 

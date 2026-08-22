@@ -20,7 +20,7 @@ body {
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Leaflet dark-theme polish */
@@ -130,4 +130,70 @@ body {
 @keyframes authority-breathe {
   0%, 100% { border-color: rgba(245, 158, 11, 0.35); }
   50%      { border-color: rgba(245, 158, 11, 0.6); }
+}
+
+/* ── Landing page: heat haze, fire line, shimmer, title glow ── */
+.heat-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  animation: blob-drift 18s ease-in-out infinite alternate;
+}
+.heat-blob-1 { width: 60vw; height: 60vw; left: -15vw; top: -20vw; background: radial-gradient(circle, rgba(249,115,22,0.55), transparent 60%); }
+.heat-blob-2 { width: 55vw; height: 55vw; right: -18vw; top: 10vh; background: radial-gradient(circle, rgba(220,38,38,0.45), transparent 60%); animation-delay: -6s; }
+.heat-blob-3 { width: 50vw; height: 50vw; left: 20vw; bottom: -25vw; background: radial-gradient(circle, rgba(251,191,36,0.4), transparent 60%); animation-delay: -12s; }
+
+@keyframes blob-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(4vw, -3vh) scale(1.08); }
+  100% { transform: translate(-3vw, 4vh) scale(0.95); }
+}
+
+.fire-line {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 6px;
+  background: linear-gradient(90deg, transparent, #f97316, #fbbf24, #ef4444, #f97316, transparent);
+  filter: blur(3px);
+  opacity: 0.8;
+  animation: fire-flicker 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes fire-flicker {
+  from { opacity: 0.5; transform: scaleY(1); }
+  to   { opacity: 0.95; transform: scaleY(1.8); }
+}
+
+.heat-shimmer {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0) 3px,
+    rgba(255, 255, 255, 0) 6px
+  );
+  animation: shimmer-rise 6s linear infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes shimmer-rise {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -60px; }
+}
+
+.heat-title {
+  text-shadow: 0 0 30px rgba(249, 115, 22, 0.35), 0 0 80px rgba(239, 68, 68, 0.2);
+  animation: title-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes title-glow {
+  from { text-shadow: 0 0 20px rgba(249, 115, 22, 0.25), 0 0 60px rgba(239, 68, 68, 0.15); }
+  to   { text-shadow: 0 0 40px rgba(249, 115, 22, 0.5), 0 0 100px rgba(239, 68, 68, 0.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-blob, .fire-line, .heat-shimmer, .heat-title { animation: none; }
 }

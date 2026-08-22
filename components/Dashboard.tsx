@@ -156,7 +156,7 @@ export function ExplainCard({
       <div className="mt-1.5 text-[10px] leading-snug text-neutral-500">
         Bands: Low 0–{THRESHOLDS.MODERATE - 1} · Moderate {THRESHOLDS.MODERATE}–
         {THRESHOLDS.HIGH - 1} · High {THRESHOLDS.HIGH}–{THRESHOLDS.CRITICAL - 1} ·
-        Critical {THRESHOLDS.CRITICAL}+. Weights are configurable in ⚗️ What-if.
+        Critical {THRESHOLDS.CRITICAL}+. Full method in the 📐 Heat-Risk Index section.
         {risk.zone.population > 0 &&
           ` Ward ${risk.zone.statics.wardNumber}, population ${risk.zone.population.toLocaleString("en-IN")}.`}
       </div>

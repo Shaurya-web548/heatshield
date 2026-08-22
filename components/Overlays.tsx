@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useDefaultCollapsedOnMobile } from "@/lib/useCollapsed";
 import { cities, type City } from "@/data/cities";
 import {
@@ -25,11 +26,13 @@ export function TitleChip({
   onCityChange,
   isAuthority,
   onAuthority,
+  homeHref,
 }: {
   city: City;
   onCityChange: (id: string) => void;
   isAuthority: boolean;
   onAuthority: () => void;
+  homeHref?: string;
 }) {
   return (
     <motion.div
@@ -40,9 +43,15 @@ export function TitleChip({
     >
       <div className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 shadow-xl backdrop-blur-md sm:px-4 sm:py-2.5">
         <div className="flex items-center gap-2 sm:gap-2.5">
-          <span className="text-base font-semibold tracking-wide sm:text-lg">
-            🌡️ HeatShield
-          </span>
+          {homeHref ? (
+            <Link href={homeHref} className="text-base font-semibold tracking-wide hover:text-orange-200 sm:text-lg">
+              🌡️ HeatShield
+            </Link>
+          ) : (
+            <span className="text-base font-semibold tracking-wide sm:text-lg">
+              🌡️ HeatShield
+            </span>
+          )}
           <select
             value={city.id}
             onChange={(e) => onCityChange(e.target.value)}

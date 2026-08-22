@@ -19,27 +19,30 @@ npm run dev
 
 Open http://localhost:3000.
 
-## The demo (one take)
+## The site
 
-1. Pick **Ahmedabad** or **Delhi**. The map shows 12 representative zones on
-   real neighbourhoods.
-2. Press **▶ PLAY DAY** → the clock runs 06:00 → 20:00 in ~10 s. Zones turn
-   yellow → orange → red as the afternoon heats; the old city and industrial
-   belts go CRITICAL around 13:00–15:00 while tree-rich zones stay cooler.
-3. **Threshold alerts** fire automatically into the 🔔 log with ACK buttons;
-   banners announce escalations.
-4. Click a zone → **"Why is Kalupur CRITICAL?"** — the factor breakdown
-   (IMD temp, humidity, built-up, concrete, traffic, tree cover → localized
-   feels-like, worker exposure).
-5. Click anywhere on the map → the **heat risk at that exact spot** with
-   worker guidance and the nearest cooling point.
-6. **📢 Worker advisory** re-issues every hour in English / हिन्दी.
-7. **⚗️ What-if**: shift IMD temperature/humidity, or green a ward and watch
-   its HRI fall.
-8. **🛡️ Authority** → sign in → the **Response console**: dispatch water
-   tankers / shade tents / ORS kiosks / cooling centres, advance tickets
-   OPEN → DISPATCHED → ON SITE → RESOLVED, see the alert→dispatch KPI and the
-   accountability log, export the audit trail as CSV.
+- **`/` — landing page.** Animated heat/fire background (embers drift toward
+  the pointer), the problem in two sentences, *Continue as resident / worker*
+  and *Authority login*, and cards into the four sections.
+- **`/dashboard` — the app**, a map with four sections (deep-linkable with
+  `?view=`):
+  1. **🔥 Hotspot dashboard** — choropleth of 12 representative zones at the
+     IMD observation time (14:30 IST), ranked hotspot table, the factors
+     beneath any zone's score, a full zone table with CSV, and the risk at
+     any street you click.
+  2. **📐 Heat-Risk Index** — the formula and weights, how each input is
+     normalized, the bands, and the city's index with factor bars beneath
+     every zone's score.
+  3. **🔔 Threshold alerts** — every zone in the High/Critical band with its
+     role-based recipients; authorities acknowledge.
+  4. **🛡️ Response tracking** — residents pick their zone and see the alert,
+     its acknowledgement, and every relief ticket from dispatch to resolution
+     (officer + time). Authorities see the response console above it:
+     dispatch water tankers / shade tents / ORS kiosks / cooling centres,
+     advance tickets OPEN → DISPATCHED → ON SITE → RESOLVED with outcome
+     notes, KPIs, ward analytics, CSV export.
+- **📢 Worker advisory** (EN / हिन्दी) and the **IMD bulletin** sit on the
+  right of the dashboard.
 
 ## Authority access
 
@@ -77,9 +80,9 @@ HRI = 0.30 × heat index (IMD temp + humidity; 30 °C → 0 … 50 °C → 100)
   [ + 0.00 × outdoor-worker exposure — optional weight ]
 ```
 
-Every factor is normalized to 0–100 before weighting; weights are **configurable
-from the ⚗️ What-if panel** (expert / municipal input) and normalized by their
-sum. Bands: Low 0–40 · Moderate 41–60 · High 61–80 · Critical 81–100. The
+Every factor is normalized to 0–100 before weighting; the weights live in
+`DEFAULT_WEIGHTS` in `lib/heat.ts` (one place to adjust on expert / municipal
+input) and are normalized by their sum. Bands: Low 0–40 · Moderate 41–60 · High 61–80 · Critical 81–100. The
 explainability card shows each factor's reading, normalized value, weight and
 points. Weights can be tuned later against ward-level heatstroke case data.
 
