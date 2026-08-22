@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { HeatAlert } from "@/lib/alerts";
 import { formatHour, LEVEL_COLORS } from "@/lib/heat";
+import { useDefaultCollapsedOnMobile } from "@/lib/useCollapsed";
 
 export function WarningBanners({ banners }: { banners: string[] }) {
   return (
@@ -37,17 +38,21 @@ export function AlertLog({
   onAck: (id: string) => void;
 }) {
   const open = alerts.filter((a) => !a.acknowledged).length;
+  const [expanded, toggle] = useDefaultCollapsedOnMobile();
   return (
     <motion.div
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.8, delay: 0.9 }}
-      className="w-64 rounded-xl border border-white/10 bg-black/70 px-4 py-3 shadow-xl backdrop-blur-md"
+      className={`${expanded ? "w-64" : "w-auto"} rounded-xl border border-white/10 bg-black/70 px-4 py-2.5 shadow-xl backdrop-blur-md sm:py-3`}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          🔔 Threshold alerts
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={toggle}
+          className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400"
+        >
+          🔔 Threshold alerts {expanded ? "✕" : "▸"}
+        </button>
         {open > 0 && (
           <span className="rounded-full bg-red-500/25 px-2 py-0.5 text-[10px] font-bold text-red-300">
             {open} open
@@ -55,7 +60,7 @@ export function AlertLog({
         )}
       </div>
 
-      {alerts.length === 0 ? (
+      {!expanded ? null : alerts.length === 0 ? (
         <div className="mt-1.5 text-[11px] text-neutral-500">
           No zone has crossed ALERT yet. Alerts fire automatically as the day
           heats.

@@ -357,7 +357,7 @@ export default function Home() {
       <WarningBanners banners={banners} />
 
       {/* Left panel: hotspot dashboard / response console */}
-      <div className="absolute left-3 top-[78px] z-[1000] max-h-[calc(100vh-170px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:left-5 sm:top-[86px]">
+      <div className="absolute left-3 top-[284px] z-[1000] max-h-[calc(100vh-370px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:top-[86px] sm:left-5 sm:max-h-[calc(100vh-170px)]">
         {isAuthority && (
           <div className="mb-2.5 flex overflow-hidden rounded-lg border border-white/10 text-[11px]">
             {(["hotspots", "response"] as LeftTab[]).map((t) => (
@@ -407,7 +407,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="absolute right-3 top-3 z-[1000] flex max-h-[calc(100vh-110px)] flex-col items-end gap-3 overflow-y-auto sm:right-5 sm:top-5">
+      <div className="absolute right-3 top-[86px] z-[1010] flex max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-start justify-end gap-2 sm:top-5 sm:right-5 sm:z-[1000] sm:max-h-[calc(100vh-110px)] sm:max-w-none sm:flex-col sm:items-end sm:gap-3 sm:overflow-y-auto">
         <BulletinCard city={city} hour={hour} risks={risks} params={params} />
         <AlertLog alerts={alerts} onAck={acknowledge} />
         <AdvisoryPanel

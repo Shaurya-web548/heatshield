@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useDefaultCollapsedOnMobile } from "@/lib/useCollapsed";
 import { cities, type City } from "@/data/cities";
 import {
   airTempC,
@@ -63,7 +64,7 @@ export function TitleChip({
                 : "border-white/15 text-neutral-300 hover:bg-white/10"
             }`}
           >
-            🛡️ {isAuthority ? "Sign out" : "Authority"}
+            🛡️<span className="hidden sm:inline"> {isAuthority ? "Sign out" : "Authority"}</span>
           </button>
         </div>
         <div className="mt-0.5 text-xs text-neutral-400">
@@ -85,6 +86,7 @@ export function BulletinCard({
   risks: ZoneRisk[];
   params?: SimParams;
 }) {
+  const [open, toggle] = useDefaultCollapsedOnMobile();
   const counts = {
     CRITICAL: risks.filter((r) => r.level === "CRITICAL").length,
     ALERT: risks.filter((r) => r.level === "ALERT").length,
@@ -96,18 +98,27 @@ export function BulletinCard({
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.8, delay: 0.6 }}
-      className="w-64 rounded-xl border border-white/10 bg-black/70 px-4 py-3 shadow-xl backdrop-blur-md"
+      className={`${open ? "w-64" : "w-auto"} rounded-xl border border-white/10 bg-black/70 px-4 py-2.5 shadow-xl backdrop-blur-md sm:py-3`}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          IMD bulletin · {city.imd.date}
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={toggle}
+          className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400"
+        >
+          🌡️ IMD bulletin · {city.imd.date} {open ? "✕" : "▸"}
+        </button>
         <span
           className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${CODE_STYLES[city.imd.colourCode]}`}
         >
           {city.imd.colourCode.toUpperCase()}
         </span>
       </div>
+      {!open && (
+        <div className="mt-0.5 font-mono text-xs tabular-nums text-orange-300">
+          {airTempC(city, hour, params).toFixed(0)} °C · {counts.CRITICAL} crit · {counts.ALERT} alert
+        </div>
+      )}
+      <div className={open ? "block" : "hidden"}>
       <div className="mt-1 text-sm font-semibold text-neutral-100">
         {city.imd.level} · {city.name}
         {isWhatIfActive(params) && (
@@ -152,6 +163,7 @@ export function BulletinCard({
         <span className="flex-1 text-center">alert</span>
         <span className="flex-1 text-center">watch</span>
         <span className="flex-1 text-center">ok</span>
+      </div>
       </div>
     </motion.div>
   );
