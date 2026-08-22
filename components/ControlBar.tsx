@@ -7,13 +7,19 @@ export type PlayState = "idle" | "playing" | "done";
 export default function ControlBar({
   hour,
   playState,
+  whatIfOpen,
+  whatIfActive,
   onScrub,
   onPlay,
+  onToggleWhatIf,
 }: {
   hour: number;
   playState: PlayState;
+  whatIfOpen: boolean;
+  whatIfActive: boolean;
   onScrub: (hour: number) => void;
   onPlay: () => void;
+  onToggleWhatIf: () => void;
 }) {
   return (
     <div className="absolute bottom-3 left-1/2 z-[1000] flex w-[calc(100vw-1rem)] max-w-fit -translate-x-1/2 items-center gap-2.5 rounded-2xl border border-white/10 bg-black/70 px-3 py-2.5 shadow-2xl backdrop-blur-md sm:bottom-5 sm:gap-5 sm:px-6 sm:py-4">
@@ -46,6 +52,21 @@ export default function ControlBar({
           {formatHour(hour)}
         </span>
       </div>
+
+      <button
+        onClick={onToggleWhatIf}
+        title="What-if planning"
+        className={`relative h-9 shrink-0 rounded-xl border px-2.5 text-xs font-semibold tracking-wide transition-colors sm:h-10 sm:px-3 ${
+          whatIfOpen
+            ? "border-sky-400/60 bg-sky-500/20 text-sky-200"
+            : "border-white/15 text-neutral-300 hover:bg-white/10"
+        }`}
+      >
+        ⚗️<span className="hidden sm:inline"> What-if</span>
+        {whatIfActive && (
+          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-sky-400" />
+        )}
+      </button>
     </div>
   );
 }

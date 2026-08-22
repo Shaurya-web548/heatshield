@@ -6,6 +6,9 @@ import {
   airTempC,
   humidityPct,
   LEVEL_COLORS,
+  DEFAULT_PARAMS,
+  isWhatIfActive,
+  type SimParams,
   type ZoneRisk,
 } from "@/lib/heat";
 
@@ -75,10 +78,12 @@ export function BulletinCard({
   city,
   hour,
   risks,
+  params = DEFAULT_PARAMS,
 }: {
   city: City;
   hour: number;
   risks: ZoneRisk[];
+  params?: SimParams;
 }) {
   const counts = {
     CRITICAL: risks.filter((r) => r.level === "CRITICAL").length,
@@ -105,6 +110,11 @@ export function BulletinCard({
       </div>
       <div className="mt-1 text-sm font-semibold text-neutral-100">
         {city.imd.level} · {city.name}
+        {isWhatIfActive(params) && (
+          <span className="ml-1.5 rounded bg-sky-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-sky-300">
+            WHAT-IF
+          </span>
+        )}
       </div>
       <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-xs tabular-nums">
         <span className="text-neutral-400">Tmax / Tmin</span>
@@ -113,11 +123,11 @@ export function BulletinCard({
         </span>
         <span className="text-neutral-400">Now (air)</span>
         <span className="text-right text-orange-200">
-          {airTempC(city, hour).toFixed(1)} °C
+          {airTempC(city, hour, params).toFixed(1)} °C
         </span>
         <span className="text-neutral-400">Humidity</span>
         <span className="text-right text-sky-200">
-          {humidityPct(city, hour).toFixed(0)}%
+          {humidityPct(city, hour, params).toFixed(0)}%
         </span>
         <span className="text-neutral-400">Wind</span>
         <span className="text-right text-sky-200">{city.imd.windKmh} km/h</span>

@@ -12,6 +12,8 @@ import {
 } from "@/components/Dashboard";
 import { AuthModal, ResponseConsole } from "@/components/Response";
 import AdvisoryPanel from "@/components/AdvisoryPanel";
+import { WhatIfPanel } from "@/components/WhatIf";
+import { useLiveAdvisory } from "@/lib/useLiveAdvisory";
 import type { MapFocus } from "@/components/HeatMap";
 import {
   cities,
@@ -26,7 +28,10 @@ import {
   formatHour,
   DAY_START,
   DAY_END,
+  DEFAULT_PARAMS,
+  isWhatIfActive,
   type RiskLevel,
+  type SimParams,
   type ZoneRisk,
 } from "@/lib/heat";
 import { detectEscalations, alertBanners, type HeatAlert } from "@/lib/alerts";
@@ -72,6 +77,11 @@ export default function Home() {
   const rafRef = useRef<number | null>(null);
   const startProgressRef = useRef(0);
 
+  // What-if planning parameters
+  const [params, setParams] = useState<SimParams>(DEFAULT_PARAMS);
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+  const [greenZoneId, setGreenZoneId] = useState(defaultCity.zones[0].id);
+
   // Authority / response console
   const [officer, setOfficer] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -90,14 +100,14 @@ export default function Home() {
     saveTickets(city.id, tickets);
   }, [city.id, tickets]);
 
-  const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
+  const risks = useMemo(() => cityRisks(city, hour, params), [city, hour, params]);
   const selected = useMemo(
     () => risks.find((r) => r.zone.id === selectedId) ?? null,
     [risks, selectedId]
   );
   const pinRisk = useMemo(
-    () => (pin ? pointRisk(city, pin, hour) : null),
-    [city, pin, hour]
+    () => (pin ? pointRisk(city, pin, hour, params) : null),
+    [city, pin, hour, params]
   );
   const pinCooling = useMemo(() => {
     if (!pin) return null;
@@ -112,9 +122,20 @@ export default function Home() {
 
   // Advisory re-issued at every whole hour (typewriter re-runs on change).
   const wholeHour = Math.floor(hour);
-  const advisory = useMemo(
-    () => generateAdvisory(city, wholeHour, cityRisks(city, wholeHour)),
-    [city, wholeHour]
+  const hourRisks = useMemo(
+    () => cityRisks(city, wholeHour, params),
+    [city, wholeHour, params]
+  );
+  const generated = useMemo(
+    () => generateAdvisory(city, wholeHour, hourRisks, params),
+    [city, wholeHour, hourRisks, params]
+  );
+  const { advisory, isLive } = useLiveAdvisory(
+    city,
+    wholeHour,
+    hourRisks,
+    params,
+    generated
   );
 
   // ── Threshold alerts + banners ──────────────────────────────────────
@@ -276,6 +297,8 @@ export default function Home() {
       setFocus(null);
       setAlerts([]);
       setBanners([]);
+      setParams(DEFAULT_PARAMS);
+      setGreenZoneId(next.zones[0].id);
       prevLevelsRef.current = new Map();
     },
     [stopAnimation]
@@ -295,6 +318,7 @@ export default function Home() {
         key={city.id}
         city={city}
         hour={hour}
+        params={params}
         selectedZoneId={selectedId}
         pinPoint={pin}
         focus={focus}
@@ -384,9 +408,13 @@ export default function Home() {
       </div>
 
       <div className="absolute right-3 top-3 z-[1000] flex max-h-[calc(100vh-110px)] flex-col items-end gap-3 overflow-y-auto sm:right-5 sm:top-5">
-        <BulletinCard city={city} hour={hour} risks={risks} />
+        <BulletinCard city={city} hour={hour} risks={risks} params={params} />
         <AlertLog alerts={alerts} onAck={acknowledge} />
-        <AdvisoryPanel advisory={advisory} hourLabel={formatHour(wholeHour)} />
+        <AdvisoryPanel
+          advisory={advisory}
+          hourLabel={formatHour(wholeHour)}
+          liveDot={isLive}
+        />
       </div>
 
       {pinRisk && pinCooling && (
@@ -397,11 +425,26 @@ export default function Home() {
         />
       )}
 
+      <WhatIfPanel
+        open={whatIfOpen}
+        city={city}
+        hour={hour}
+        params={params}
+        greenZoneId={greenZoneId}
+        onChange={setParams}
+        onGreenZone={setGreenZoneId}
+        onReset={() => setParams(DEFAULT_PARAMS)}
+        onClose={() => setWhatIfOpen(false)}
+      />
+
       <ControlBar
         hour={hour}
         playState={playState}
+        whatIfOpen={whatIfOpen}
+        whatIfActive={isWhatIfActive(params)}
         onScrub={handleScrub}
         onPlay={handlePlay}
+        onToggleWhatIf={() => setWhatIfOpen((v) => !v)}
       />
 
       <AuthModal

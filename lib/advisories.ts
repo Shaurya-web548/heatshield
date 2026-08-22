@@ -4,7 +4,13 @@
 
 import { type City, type CoolingPoint, COOLING_LABEL } from "@/data/cities";
 import { distanceKm } from "@/lib/geo";
-import { airTempC, formatHour, type ZoneRisk } from "@/lib/heat";
+import {
+  airTempC,
+  formatHour,
+  DEFAULT_PARAMS,
+  type SimParams,
+  type ZoneRisk,
+} from "@/lib/heat";
 
 export type Urgency = "ADVISORY" | "WARNING" | "EMERGENCY";
 
@@ -33,13 +39,14 @@ export function nearestCooling(
 export function generateAdvisory(
   city: City,
   hour: number,
-  risks: ZoneRisk[]
+  risks: ZoneRisk[],
+  p: SimParams = DEFAULT_PARAMS
 ): Advisory {
   const h = Math.floor(hour);
   const critical = risks.filter((r) => r.level === "CRITICAL");
   const alert = risks.filter((r) => r.level === "ALERT");
   const top = risks[0];
-  const temp = airTempC(city, h);
+  const temp = airTempC(city, h, p);
   const cooling = nearestCooling(city, top.zone.center).point;
   const coolingLabel = COOLING_LABEL[cooling.kind].toLowerCase();
 

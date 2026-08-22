@@ -23,7 +23,9 @@ import {
   cityRisks,
   LEVEL_COLORS,
   LEVEL_ORDER,
+  DEFAULT_PARAMS,
   type RiskLevel,
+  type SimParams,
   type ZoneRisk,
 } from "@/lib/heat";
 
@@ -72,6 +74,7 @@ function FocusFly({ focus }: { focus: MapFocus }) {
 export default function HeatMap({
   city,
   hour,
+  params = DEFAULT_PARAMS,
   selectedZoneId,
   pinPoint,
   focus = null,
@@ -80,13 +83,14 @@ export default function HeatMap({
 }: {
   city: City;
   hour: number;
+  params?: SimParams;
   selectedZoneId?: string | null;
   pinPoint: LatLng | null;
   focus?: MapFocus;
   onZoneClick?: (risk: ZoneRisk) => void;
   onMapClick: (p: LatLng) => void;
 }) {
-  const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
+  const risks = useMemo(() => cityRisks(city, hour, params), [city, hour, params]);
   const hexes = useMemo(
     () =>
       new Map(

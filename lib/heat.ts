@@ -21,6 +21,24 @@ export const LEVEL_COLORS: Record<RiskLevel, string> = {
 
 export const THRESHOLDS = { WATCH: 40, ALERT: 60, CRITICAL: 80 };
 
+/** What-if planning parameters (defaults = the IMD snapshot, no greening). */
+export type SimParams = {
+  tempDeltaC: number; // shift applied to IMD Tmax/Tmin
+  humidityDeltaPct: number; // shift applied to morning RH
+  greening: Record<string, number>; // zoneId -> added tree-cover fraction
+};
+
+export const DEFAULT_PARAMS: SimParams = {
+  tempDeltaC: 0,
+  humidityDeltaPct: 0,
+  greening: {},
+};
+
+export const isWhatIfActive = (p: SimParams) =>
+  p.tempDeltaC !== 0 ||
+  p.humidityDeltaPct !== 0 ||
+  Object.values(p.greening).some((g) => g > 0);
+
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
 
@@ -32,14 +50,26 @@ export function dayProfile(hour: number): number {
 }
 
 /** IMD-bulletin air temperature at a given hour (diurnal curve). */
-export function airTempC(city: City, hour: number): number {
+export function airTempC(
+  city: City,
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
+): number {
   const { tmaxC, tminC } = city.imd;
-  return tminC + (tmaxC - tminC) * dayProfile(hour);
+  return tminC + p.tempDeltaC + (tmaxC - tminC) * dayProfile(hour);
 }
 
 /** Relative humidity falls through the afternoon as air heats. */
-export function humidityPct(city: City, hour: number): number {
-  return clamp(city.imd.humidityPct - 12 * dayProfile(hour), 8, 95);
+export function humidityPct(
+  city: City,
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
+): number {
+  return clamp(
+    city.imd.humidityPct + p.humidityDeltaPct - 12 * dayProfile(hour),
+    8,
+    95
+  );
 }
 
 /** Heat index (feels-like) in °C — Rothfusz regression, valid above ~27 °C. */
@@ -85,9 +115,26 @@ function urbanDeltas(zone: Zone, hour: number) {
   };
 }
 
-export function zoneRisk(city: City, zone: Zone, hour: number): ZoneRisk {
-  const t = airTempC(city, hour);
-  const rh = humidityPct(city, hour);
+export function zoneRisk(
+  city: City,
+  zoneIn: Zone,
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
+): ZoneRisk {
+  const extra = p.greening[zoneIn.id] ?? 0;
+  const zone: Zone =
+    extra > 0
+      ? {
+          ...zoneIn,
+          factors: {
+            ...zoneIn.factors,
+            treeCover: clamp(zoneIn.factors.treeCover + extra, 0, 0.9),
+            surface: clamp(zoneIn.factors.surface - extra * 0.5, 0, 1),
+          },
+        }
+      : zoneIn;
+  const t = airTempC(city, hour, p);
+  const rh = humidityPct(city, hour, p);
   const base = heatIndexC(t, rh);
   const d = urbanDeltas(zone, hour);
   const feelsLike = base + d.builtUp + d.surface + d.traffic + d.trees;
@@ -126,7 +173,8 @@ export function zoneRisk(city: City, zone: Zone, hour: number): ZoneRisk {
 export function pointRisk(
   city: City,
   point: LatLng,
-  hour: number
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
 ): ZoneRisk & { nearest: Zone; distanceKm: number } {
   const ranked = city.zones
     .map((zone) => ({ zone, d: distanceKm(point, zone.center) }))
@@ -152,15 +200,19 @@ export function pointRisk(
     },
   };
   return {
-    ...zoneRisk(city, synthetic, hour),
+    ...zoneRisk(city, synthetic, hour, p),
     nearest: ranked[0].zone,
     distanceKm: ranked[0].d,
   };
 }
 
-export function cityRisks(city: City, hour: number): ZoneRisk[] {
+export function cityRisks(
+  city: City,
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
+): ZoneRisk[] {
   return city.zones
-    .map((zone) => zoneRisk(city, zone, hour))
+    .map((zone) => zoneRisk(city, zone, hour, p))
     .sort((a, b) => b.hri - a.hri);
 }
 
