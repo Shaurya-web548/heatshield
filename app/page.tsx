@@ -10,12 +10,20 @@ import {
   ExplainCard,
   PointRiskCard,
 } from "@/components/Dashboard";
+import { AuthModal, ResponseConsole } from "@/components/Response";
+import AdvisoryPanel from "@/components/AdvisoryPanel";
 import type { MapFocus } from "@/components/HeatMap";
-import { cities, defaultCity } from "@/data/cities";
+import {
+  cities,
+  defaultCity,
+  COOLING_ICON,
+  COOLING_LABEL,
+} from "@/data/cities";
 import type { LatLng } from "@/lib/geo";
 import {
   cityRisks,
   pointRisk,
+  formatHour,
   DAY_START,
   DAY_END,
   type RiskLevel,
@@ -23,9 +31,16 @@ import {
 } from "@/lib/heat";
 import { detectEscalations, alertBanners, type HeatAlert } from "@/lib/alerts";
 import { generateAdvisory, nearestCooling } from "@/lib/advisories";
-import { COOLING_ICON, COOLING_LABEL } from "@/data/cities";
-import AdvisoryPanel from "@/components/AdvisoryPanel";
-import { formatHour } from "@/lib/heat";
+import {
+  createTicket,
+  advanceTicket,
+  loadTickets,
+  saveTickets,
+  ticketsToCsv,
+  MEASURES,
+  type Measure,
+  type Ticket,
+} from "@/lib/response";
 
 // Leaflet touches `window` at module scope — it must never run during SSR.
 const HeatMap = dynamic(() => import("@/components/HeatMap"), {
@@ -45,6 +60,8 @@ const DAY_SPAN = DAY_END - DAY_START;
 const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
+type LeftTab = "hotspots" | "response";
+
 export default function Home() {
   const [city, setCity] = useState(defaultCity);
   const [hour, setHour] = useState(DAY_START);
@@ -55,8 +72,25 @@ export default function Home() {
   const rafRef = useRef<number | null>(null);
   const startProgressRef = useRef(0);
 
+  // Authority / response console
+  const [officer, setOfficer] = useState<string | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [leftTab, setLeftTab] = useState<LeftTab>("hotspots");
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const isAuthority = officer !== null;
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("heatshield-officer");
+    if (saved) setOfficer(saved);
+  }, []);
+  useEffect(() => {
+    setTickets(loadTickets(city.id));
+  }, [city.id]);
+  useEffect(() => {
+    saveTickets(city.id, tickets);
+  }, [city.id, tickets]);
+
   const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
-  // Selected zone's risk, recomputed live as the hour moves.
   const selected = useMemo(
     () => risks.find((r) => r.zone.id === selectedId) ?? null,
     [risks, selectedId]
@@ -125,6 +159,47 @@ export default function Home() {
       ),
     [hour]
   );
+
+  // ── Response actions (authority only) ───────────────────────────────
+  const dispatch = useCallback(
+    (risk: ZoneRisk, measure: Measure) => {
+      if (!officer) return;
+      const t = createTicket(city.id, risk.zone, measure, hour, officer, alerts);
+      setTickets((old) => [...old, t]);
+      // Dispatching counts as acknowledging that zone's open alerts.
+      setAlerts((old) =>
+        old.map((a) =>
+          a.zoneId === risk.zone.id && !a.acknowledged
+            ? { ...a, acknowledged: true, ackHour: hour }
+            : a
+        )
+      );
+      pushBanners([
+        `${MEASURES[measure].icon} ${MEASURES[measure].label} ticket opened for ${risk.zone.name} (${t.id})`,
+      ]);
+    },
+    [officer, city.id, hour, alerts, pushBanners]
+  );
+
+  const advance = useCallback(
+    (id: string) => {
+      if (!officer) return;
+      setTickets((old) =>
+        old.map((t) => (t.id === id ? advanceTicket(t, hour, officer) : t))
+      );
+    },
+    [officer, hour]
+  );
+
+  const exportCsv = useCallback(() => {
+    const blob = new Blob([ticketsToCsv(tickets)], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `heatshield-${city.id}-response-log.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [tickets, city.id]);
 
   // ── Day playback ────────────────────────────────────────────────────
   const stopAnimation = useCallback(() => {
@@ -232,26 +307,79 @@ export default function Home() {
 
       <div className="vignette z-[900]" />
       <div className="film-grain z-[901]" />
+      {isAuthority && (
+        <>
+          <div className="authority-frame z-[950]" />
+          <div className="absolute left-1/2 top-0 z-[1050] -translate-x-1/2 rounded-b-lg border border-t-0 border-amber-400/40 bg-amber-950/80 px-4 py-1 text-[11px] font-bold tracking-widest text-amber-300 backdrop-blur-md">
+            🛡️ MUNICIPAL RESPONSE MODE · {officer}
+          </div>
+        </>
+      )}
 
-      <TitleChip city={city} onCityChange={handleCityChange} />
+      <TitleChip
+        city={city}
+        onCityChange={handleCityChange}
+        isAuthority={isAuthority}
+        onAuthority={() => {
+          if (isAuthority) {
+            sessionStorage.removeItem("heatshield-officer");
+            setOfficer(null);
+            setLeftTab("hotspots");
+          } else {
+            setAuthOpen(true);
+          }
+        }}
+      />
       <WarningBanners banners={banners} />
 
-      {/* Hotspot dashboard (left) */}
-      <div className="absolute left-3 top-[78px] z-[1000] w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:left-5 sm:top-[86px]">
-        <HotspotTable
-          risks={risks}
-          hour={hour}
-          selectedId={selectedId}
-          onSelect={(r) => selectZone(r, true)}
-        />
-        {selected && (
-          <ExplainCard risk={selected} onClose={() => setSelectedId(null)} />
-        )}
-        {!selected && (
-          <div className="mt-2 text-[10px] text-neutral-500">
-            Click a row or a zone for the factor breakdown · click anywhere on
-            the map for the risk at that spot
+      {/* Left panel: hotspot dashboard / response console */}
+      <div className="absolute left-3 top-[78px] z-[1000] max-h-[calc(100vh-170px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:left-5 sm:top-[86px]">
+        {isAuthority && (
+          <div className="mb-2.5 flex overflow-hidden rounded-lg border border-white/10 text-[11px]">
+            {(["hotspots", "response"] as LeftTab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setLeftTab(t)}
+                className={`flex-1 py-1.5 font-semibold ${
+                  leftTab === t
+                    ? "bg-amber-500/25 text-amber-200"
+                    : "text-neutral-400 hover:bg-white/10"
+                }`}
+              >
+                {t === "hotspots" ? "🔥 Hotspots" : "🛡️ Response"}
+              </button>
+            ))}
           </div>
+        )}
+        {leftTab === "response" && isAuthority && officer ? (
+          <ResponseConsole
+            hour={hour}
+            risks={risks}
+            tickets={tickets}
+            officer={officer}
+            onDispatch={dispatch}
+            onAdvance={advance}
+            onExport={exportCsv}
+            onReset={() => setTickets([])}
+          />
+        ) : (
+          <>
+            <HotspotTable
+              risks={risks}
+              hour={hour}
+              selectedId={selectedId}
+              onSelect={(r) => selectZone(r, true)}
+            />
+            {selected && (
+              <ExplainCard risk={selected} onClose={() => setSelectedId(null)} />
+            )}
+            {!selected && (
+              <div className="mt-2 text-[10px] text-neutral-500">
+                Click a row or a zone for the factor breakdown · click anywhere
+                on the map for the risk at that spot
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -274,6 +402,17 @@ export default function Home() {
         playState={playState}
         onScrub={handleScrub}
         onPlay={handlePlay}
+      />
+
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={(id) => {
+          sessionStorage.setItem("heatshield-officer", id);
+          setOfficer(id);
+          setAuthOpen(false);
+          setLeftTab("response");
+        }}
       />
     </main>
   );

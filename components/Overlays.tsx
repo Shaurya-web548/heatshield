@@ -19,9 +19,13 @@ const CODE_STYLES: Record<string, string> = {
 export function TitleChip({
   city,
   onCityChange,
+  isAuthority,
+  onAuthority,
 }: {
   city: City;
   onCityChange: (id: string) => void;
+  isAuthority: boolean;
+  onAuthority: () => void;
 }) {
   return (
     <motion.div
@@ -47,6 +51,17 @@ export function TitleChip({
               </option>
             ))}
           </select>
+          <button
+            onClick={onAuthority}
+            title={isAuthority ? "Sign out of the response console" : "Municipal officer sign-in"}
+            className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+              isAuthority
+                ? "border-amber-400/50 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
+                : "border-white/15 text-neutral-300 hover:bg-white/10"
+            }`}
+          >
+            🛡️ {isAuthority ? "Sign out" : "Authority"}
+          </button>
         </div>
         <div className="mt-0.5 text-xs text-neutral-400">
           Simplified heat-index model · IMD snapshot data · representative zones
