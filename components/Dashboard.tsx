@@ -8,6 +8,7 @@ import {
   formatHour,
   type ZoneRisk,
 } from "@/lib/heat";
+import { CountUp, GrowBar, FAST, pressable } from "@/components/Motion";
 
 const LEVEL_STYLES: Record<string, string> = {
   LOW: "bg-green-500/20 text-green-300 border-green-400/40",
@@ -18,11 +19,15 @@ const LEVEL_STYLES: Record<string, string> = {
 
 export function LevelBadge({ level }: { level: string }) {
   return (
-    <span
+    <motion.span
+      key={level}
+      initial={{ scale: 0.85, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={FAST}
       className={`inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${LEVEL_STYLES[level]}`}
     >
       {level}
-    </span>
+    </motion.span>
   );
 }
 
@@ -31,12 +36,16 @@ export function HotspotTable({
   risks,
   hour,
   selectedId,
+  hoveredId,
   onSelect,
+  onHover,
 }: {
   risks: ZoneRisk[];
   hour: number;
   selectedId: string | null;
+  hoveredId?: string | null;
   onSelect: (r: ZoneRisk) => void;
+  onHover?: (id: string | null) => void;
 }) {
   return (
     <div>
@@ -49,14 +58,25 @@ export function HotspotTable({
       <div className="max-h-[38vh] space-y-1 overflow-y-auto pr-0.5">
         {risks.map((r, i) => {
           const active = r.zone.id === selectedId;
+          const hover = r.zone.id === hoveredId;
           return (
-            <button
+            <motion.button
               key={r.zone.id}
+              layout
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...FAST, delay: i * 0.03 }}
+              whileHover={pressable.whileHover}
+              whileTap={pressable.whileTap}
               onClick={() => onSelect(r)}
+              onMouseEnter={() => onHover?.(r.zone.id)}
+              onMouseLeave={() => onHover?.(null)}
               className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors ${
                 active
                   ? "border-white/40 bg-white/15"
-                  : "border-white/10 bg-white/5 hover:bg-white/10"
+                  : hover
+                    ? "border-white/25 bg-white/10"
+                    : "border-white/10 bg-white/5 hover:bg-white/10"
               }`}
             >
               <span className="w-4 shrink-0 font-mono text-[10px] text-neutral-500">
@@ -69,23 +89,14 @@ export function HotspotTable({
                     {r.zone.statics.wardNumber}
                   </span>
                 </span>
-                <span className="mt-0.5 block h-1 w-full overflow-hidden rounded bg-white/10">
-                  <span
-                    className="block h-full rounded transition-[width] duration-300"
-                    style={{
-                      width: `${r.hri}%`,
-                      background: LEVEL_COLORS[r.level],
-                    }}
-                  />
-                </span>
+                <GrowBar pct={r.hri} color={LEVEL_COLORS[r.level]} height={4} delay={0.1 + i * 0.03} className="mt-0.5" />
               </span>
-              <span
+              <CountUp
+                value={r.hri}
                 className="w-8 shrink-0 text-right font-mono text-sm font-bold tabular-nums"
                 style={{ color: LEVEL_COLORS[r.level] }}
-              >
-                {r.hri}
-              </span>
-            </button>
+              />
+            </motion.button>
           );
         })}
       </div>
@@ -104,8 +115,9 @@ export function ExplainCard({
   return (
     <motion.div
       key={risk.zone.id}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={FAST}
       className="mt-2 rounded-lg border border-white/15 bg-white/5 p-2.5"
     >
       <div className="flex items-start justify-between gap-2">
@@ -114,19 +126,18 @@ export function ExplainCard({
             Why is {risk.zone.name} {risk.level}?
           </div>
           <div className="mt-0.5 flex items-center gap-2">
-            <span
+            <CountUp
+              value={risk.hri}
               className="font-mono text-2xl font-bold tabular-nums"
               style={{ color: LEVEL_COLORS[risk.level] }}
-            >
-              {risk.hri}
-            </span>
+            />
             <LevelBadge level={risk.level} />
           </div>
         </div>
         <button
           onClick={onClose}
           aria-label="Close explanation"
-          className="rounded px-1.5 text-xs text-neutral-500 hover:bg-white/10 hover:text-white"
+          className="rounded px-1.5 text-xs text-neutral-500 transition hover:bg-white/10 hover:text-white"
         >
           ✕
         </button>
@@ -137,8 +148,8 @@ export function ExplainCard({
         <span className="text-right text-neutral-500">norm</span>
         <span className="text-right text-neutral-500">w</span>
         <span className="text-right text-neutral-500">pts</span>
-        {risk.factors.map((f) => (
-          <FactorRow key={f.key} label={f.label} value={f.value} normalized={f.normalized} weight={f.weight} points={f.points} />
+        {risk.factors.map((f, i) => (
+          <FactorRow key={f.key} index={i} label={f.label} value={f.value} normalized={f.normalized} weight={f.weight} points={f.points} />
         ))}
       </div>
 
@@ -165,12 +176,14 @@ export function ExplainCard({
 }
 
 function FactorRow({
+  index,
   label,
   value,
   normalized,
   weight,
   points,
 }: {
+  index: number;
   label: string;
   value: string;
   normalized: number;
@@ -178,21 +191,27 @@ function FactorRow({
   points: number;
 }) {
   const muted = weight === 0;
+  const cell = (content: React.ReactNode, cls: string) => (
+    <motion.span
+      initial={{ opacity: 0, x: 6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ ...FAST, delay: 0.05 + index * 0.05 }}
+      className={cls}
+    >
+      {content}
+    </motion.span>
+  );
   return (
     <>
-      <span className={`truncate ${muted ? "text-neutral-600" : "text-neutral-400"}`} title={label}>
-        {label.replace(/ \(.*\)$/, "")}{" "}
-        <span className="text-neutral-600">{value}</span>
-      </span>
-      <span className={`text-right font-mono ${muted ? "text-neutral-600" : "text-neutral-300"}`}>
-        {normalized}
-      </span>
-      <span className={`text-right font-mono ${muted ? "text-neutral-600" : "text-sky-300"}`}>
-        {weight.toFixed(2)}
-      </span>
-      <span className={`text-right font-mono ${muted ? "text-neutral-600" : "text-orange-300"}`}>
-        {points > 0 ? `+${points.toFixed(1)}` : "—"}
-      </span>
+      {cell(
+        <>
+          {label.replace(/ \(.*\)$/, "")} <span className="text-neutral-600">{value}</span>
+        </>,
+        `truncate ${muted ? "text-neutral-600" : "text-neutral-400"}`
+      )}
+      {cell(normalized, `text-right font-mono ${muted ? "text-neutral-600" : "text-neutral-300"}`)}
+      {cell(weight.toFixed(2), `text-right font-mono ${muted ? "text-neutral-600" : "text-sky-300"}`)}
+      {cell(points > 0 ? `+${points.toFixed(1)}` : "—", `text-right font-mono ${muted ? "text-neutral-600" : "text-orange-300"}`)}
     </>
   );
 }
@@ -217,7 +236,7 @@ export function ZoneTable({
         <span>📋 Zone table · {formatHour(hour)}</span>
         <button
           onClick={onExport}
-          className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-neutral-300 hover:bg-white/10"
+          className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-neutral-300 transition hover:bg-white/10"
         >
           ⬇ CSV
         </button>
@@ -232,15 +251,18 @@ export function ZoneTable({
             </tr>
           </thead>
           <tbody>
-            {risks.map((r) => {
+            {risks.map((r, i) => {
               const d = zoneDerived(city, r.zone);
               const f = r.zone.factors;
               const s = r.zone.statics;
               return (
-                <tr
+                <motion.tr
                   key={r.zone.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, delay: i * 0.02 }}
                   onClick={() => onSelect(r)}
-                  className="cursor-pointer border-t border-white/5 text-neutral-300 hover:bg-white/10"
+                  className="cursor-pointer border-t border-white/5 text-neutral-300 transition-colors hover:bg-white/10"
                 >
                   <td className="whitespace-nowrap px-1.5 py-1 text-neutral-100">{r.zone.name}</td>
                   <td className="px-1.5 py-1 text-neutral-500">{s.wardNumber}</td>
@@ -257,7 +279,7 @@ export function ZoneTable({
                   <td className="px-1.5 py-1">{s.nearestHealthCentreKm}</td>
                   <td className="px-1.5 py-1">{d.coolingShelterCount}</td>
                   <td className="px-1.5 py-1">{d.waterPointCount}</td>
-                </tr>
+                </motion.tr>
               );
             })}
           </tbody>
@@ -282,8 +304,9 @@ export function PointRiskCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 14, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={FAST}
       className="absolute bottom-20 left-3 z-[1000] w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/75 p-3.5 shadow-xl backdrop-blur-md sm:bottom-5 sm:left-5"
     >
       <div className="flex items-center justify-between">
@@ -293,17 +316,14 @@ export function PointRiskCard({
         <button
           onClick={onClose}
           aria-label="Close"
-          className="rounded px-1.5 text-xs text-neutral-500 hover:bg-white/10 hover:text-white"
+          className="rounded px-1.5 text-xs text-neutral-500 transition hover:bg-white/10 hover:text-white"
         >
           ✕
         </button>
       </div>
       <div className="mt-1.5 flex items-center gap-3">
-        <span
-          className="font-mono text-3xl font-bold tabular-nums"
-          style={{ color: LEVEL_COLORS[risk.level] }}
-        >
-          {risk.hri}
+        <span className="font-mono text-3xl font-bold tabular-nums" style={{ color: LEVEL_COLORS[risk.level] }}>
+          <CountUp value={risk.hri} />
           <span className="text-sm text-neutral-500">/100</span>
         </span>
         <LevelBadge level={risk.level} />

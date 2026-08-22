@@ -197,3 +197,31 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .heat-blob, .fire-line, .heat-shimmer, .heat-title { animation: none; }
 }
+
+/* ── Dashboard interaction polish ── */
+.zone-selected {
+  animation: zone-select 1.6s ease-in-out infinite;
+}
+
+@keyframes zone-select {
+  0%, 100% { stroke-width: 2.5; stroke-opacity: 1; }
+  50%      { stroke-width: 4;   stroke-opacity: 0.7; }
+}
+
+.leaflet-interactive {
+  transition: fill-opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+.coach-hint {
+  animation: coach-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes coach-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-selected, .coach-hint { animation: none; }
+  .leaflet-interactive { transition: none; }
+}

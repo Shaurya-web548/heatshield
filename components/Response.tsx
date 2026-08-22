@@ -245,12 +245,14 @@ export function ResponseConsole({
                       </option>
                     ))}
                   </select>
-                  <button
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => onDispatch(risk, chosen)}
                     className="shrink-0 rounded-md bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black hover:bg-amber-400"
                   >
                     DISPATCH
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             );
@@ -270,7 +272,14 @@ export function ResponseConsole({
           const nxt = nextStatus(t.status);
           const resolving = nxt === "RESOLVED";
           return (
-            <div key={t.id} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
+            <motion.div
+              key={t.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5"
+            >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-xs text-neutral-100">
                   {MEASURES[t.measure].icon} {MEASURES[t.measure].label} → {t.zoneName}
@@ -300,7 +309,7 @@ export function ResponseConsole({
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

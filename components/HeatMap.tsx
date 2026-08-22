@@ -71,23 +71,39 @@ function FocusFly({ focus }: { focus: MapFocus }) {
   return null;
 }
 
+function IntroFly({ target, zoom }: { target: [number, number]; zoom: number }) {
+  const map = useMap();
+  const flown = useRef(false);
+  useEffect(() => {
+    if (flown.current) return;
+    flown.current = true;
+    const t = setTimeout(() => map.flyTo(target, zoom, { duration: 1.8 }), 300);
+    return () => clearTimeout(t);
+  }, [map, target, zoom]);
+  return null;
+}
+
 export default function HeatMap({
   city,
   hour,
   params = DEFAULT_PARAMS,
   selectedZoneId,
+  hoveredZoneId,
   pinPoint,
   focus = null,
   onZoneClick,
+  onZoneHover,
   onMapClick,
 }: {
   city: City;
   hour: number;
   params?: SimParams;
   selectedZoneId?: string | null;
+  hoveredZoneId?: string | null;
   pinPoint: LatLng | null;
   focus?: MapFocus;
   onZoneClick?: (risk: ZoneRisk) => void;
+  onZoneHover?: (id: string | null) => void;
   onMapClick: (p: LatLng) => void;
 }) {
   const risks = useMemo(() => cityRisks(city, hour, params), [city, hour, params]);
@@ -142,12 +158,13 @@ export default function HeatMap({
   return (
     <MapContainer
       center={[city.center.lat, city.center.lng]}
-      zoom={city.zoom}
+      zoom={city.zoom - 2}
       zoomControl={false}
       attributionControl={true}
       className="h-full w-full"
       style={{ background: "#0b0a0f" }}
     >
+      <IntroFly target={[city.center.lat, city.center.lng]} zoom={city.zoom} />
       <ClickCatcher onClick={onMapClick} />
       <FocusFly focus={focus} />
       <TileLayer
@@ -160,8 +177,10 @@ export default function HeatMap({
       {risks.map((r) => {
         const color = LEVEL_COLORS[r.level];
         const selected = r.zone.id === selectedZoneId;
+        const hovered = r.zone.id === hoveredZoneId;
         const cls = [
-          r.level === "CRITICAL" ? "zone-critical" : "",
+          r.level === "CRITICAL" && !selected ? "zone-critical" : "",
+          selected ? "zone-selected" : "",
           flashing.has(r.zone.id) ? "zone-flash" : "",
         ]
           .filter(Boolean)
@@ -175,14 +194,16 @@ export default function HeatMap({
                 L.DomEvent.stopPropagation(e);
                 onZoneClick?.(r);
               },
+              mouseover: () => onZoneHover?.(r.zone.id),
+              mouseout: () => onZoneHover?.(null),
             }}
             pathOptions={{
-              color: selected ? "#ffffff" : color,
-              weight: selected ? 2.5 : 1.5,
+              color: selected || hovered ? "#ffffff" : color,
+              weight: selected ? 2.5 : hovered ? 2 : 1.5,
               opacity: 0.9,
               fillColor: color,
               // hotter = more opaque, so the choropleth "ignites" through the day
-              fillOpacity: 0.12 + (r.hri / 100) * 0.5,
+              fillOpacity: (hovered ? 0.22 : 0.12) + (r.hri / 100) * 0.5,
               className: cls || undefined,
             }}
           >

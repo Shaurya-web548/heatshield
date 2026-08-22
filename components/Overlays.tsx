@@ -165,7 +165,15 @@ export function BulletinCard({
             }}
             title={l}
           >
-            {counts[l]}
+            <motion.span
+              key={counts[l]}
+              initial={{ scale: 1.3, opacity: 0.6 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="inline-block"
+            >
+              {counts[l]}
+            </motion.span>
           </span>
         ))}
       </div>

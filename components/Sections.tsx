@@ -14,6 +14,7 @@ import {
 } from "@/lib/heat";
 import { MEASURES, STATUS_FLOW, type Ticket } from "@/lib/response";
 import { LevelBadge } from "@/components/Dashboard";
+import { GrowBar, FAST } from "@/components/Motion";
 
 export type View = "hotspots" | "hri" | "alerts" | "response";
 
@@ -40,16 +41,21 @@ export function SectionNav({
           key={v.id}
           onClick={() => onView(v.id)}
           title={v.label}
-          className={`flex-1 py-1.5 font-semibold ${
-            view === v.id
-              ? v.id === "response" && isAuthority
-                ? "bg-amber-500/25 text-amber-200"
-                : "bg-orange-600/70 text-white"
-              : "text-neutral-400 hover:bg-white/10"
+          className={`relative flex-1 py-1.5 font-semibold transition-colors ${
+            view === v.id ? "text-white" : "text-neutral-400 hover:bg-white/10"
           }`}
         >
-          <span className="sm:hidden">{v.short}</span>
-          <span className="hidden sm:inline">{v.label.replace(/^\S+\s/, "")}</span>
+          {view === v.id && (
+            <motion.span
+              layoutId="section-indicator"
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              className={`absolute inset-0 ${
+                v.id === "response" && isAuthority ? "bg-amber-500/30" : "bg-orange-600/70"
+              }`}
+            />
+          )}
+          <span className="relative sm:hidden">{v.short}</span>
+          <span className="relative hidden sm:inline">{v.label.replace(/^\S+\s/, "")}</span>
         </button>
       ))}
     </div>
@@ -77,16 +83,7 @@ export function FactorBars({ risk, compact = false }: { risk: ZoneRisk; compact?
             <span className="truncate text-neutral-400" title={f.label}>
               {f.label.replace(/ \(.*\)$/, "")}
             </span>
-            <span className="h-1.5 overflow-hidden rounded bg-white/10">
-              <span
-                className="block h-full rounded"
-                style={{
-                  width: `${(f.points / max) * 100}%`,
-                  background: LEVEL_COLORS[risk.level],
-                  opacity: 0.5 + 0.5 * (f.normalized / 100),
-                }}
-              />
-            </span>
+            <GrowBar pct={(f.points / max) * 100} color={LEVEL_COLORS[risk.level]} height={6} />
             <span className="font-mono text-neutral-300">
               <span className="text-neutral-500">{f.value} · n{f.normalized} × {f.weight.toFixed(2)} = </span>
               +{f.points.toFixed(1)}
@@ -149,13 +146,16 @@ export function HriSection({
           Risk index · {city.name} · observed {formatHour(hour)} IST
         </div>
         <div className="mt-1.5 space-y-1.5">
-          {risks.map((r) => (
+          {risks.map((r, i) => (
             <motion.button
               key={r.zone.id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ ...FAST, delay: i * 0.04 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.985 }}
               onClick={() => onSelect(r)}
-              className="block w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left hover:bg-white/10"
+              className="block w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left transition-colors hover:bg-white/10"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-xs font-medium text-neutral-100">
@@ -230,9 +230,12 @@ export function AlertsSection({
         <div className="mt-2 text-[11px] text-neutral-500">No zone is above High right now.</div>
       ) : (
         <div className="mt-2 space-y-1">
-          {alerts.map((a) => (
-            <div
+          {alerts.map((a, i) => (
+            <motion.div
               key={a.id}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...FAST, delay: i * 0.04 }}
               className={`rounded-lg border px-2.5 py-1.5 text-[11px] ${
                 a.acknowledged ? "border-white/10 bg-white/5 opacity-70" : "border-white/15 bg-white/10"
               }`}
@@ -269,7 +272,7 @@ export function AlertsSection({
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -374,9 +377,11 @@ export function ResidentResponse({
                       const done = i <= doneIdx;
                       return (
                         <li key={s} className="text-center">
-                          <div
+                          <motion.div
                             className="mx-auto h-1.5 rounded"
-                            style={{ background: done ? "#22c55e" : "rgba(255,255,255,0.12)" }}
+                            initial={false}
+                            animate={{ background: done ? "#22c55e" : "rgba(255,255,255,0.12)", scaleX: done ? 1 : 0.6 }}
+                            transition={{ ...FAST, delay: i * 0.08 }}
                           />
                           <div className={`mt-0.5 text-[9px] ${done ? "text-green-300" : "text-neutral-600"}`}>
                             {STEP_LABEL[s]}
