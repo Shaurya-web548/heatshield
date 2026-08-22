@@ -2,7 +2,8 @@
 // IMD heat index (air temp + humidity) + urban surface adjustments + exposure.
 // A communication/decision-support model, not a meteorological one.
 
-import type { City, Zone } from "@/data/cities";
+import type { City, Zone, ZoneFactors } from "@/data/cities";
+import { distanceKm, type LatLng } from "@/lib/geo";
 
 export const DAY_START = 6; // 06:00
 export const DAY_END = 20; // 20:00
@@ -115,6 +116,46 @@ export function zoneRisk(city: City, zone: Zone, hour: number): ZoneRisk {
   ];
 
   return { zone, hri, level, airTempC: t, feelsLikeC: feelsLike, factors };
+}
+
+/**
+ * Risk at an arbitrary point: blend the urban factors of the three nearest
+ * zones by inverse-distance weighting, then score like a zone. Lets a vendor
+ * or traffic constable check their exact spot.
+ */
+export function pointRisk(
+  city: City,
+  point: LatLng,
+  hour: number
+): ZoneRisk & { nearest: Zone; distanceKm: number } {
+  const ranked = city.zones
+    .map((zone) => ({ zone, d: distanceKm(point, zone.center) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 3);
+  const weights = ranked.map(({ d }) => 1 / Math.max(0.15, d) ** 2);
+  const total = weights.reduce((s, w) => s + w, 0);
+  const blend = (key: keyof ZoneFactors) =>
+    ranked.reduce((s, { zone }, i) => s + zone.factors[key] * weights[i], 0) /
+    total;
+  const synthetic: Zone = {
+    id: "point",
+    name: `Point near ${ranked[0].zone.name}`,
+    center: point,
+    radiusKm: 0,
+    population: 0,
+    factors: {
+      treeCover: blend("treeCover"),
+      builtUp: blend("builtUp"),
+      traffic: blend("traffic"),
+      surface: blend("surface"),
+      workers: blend("workers"),
+    },
+  };
+  return {
+    ...zoneRisk(city, synthetic, hour),
+    nearest: ranked[0].zone,
+    distanceKm: ranked[0].d,
+  };
 }
 
 export function cityRisks(city: City, hour: number): ZoneRisk[] {

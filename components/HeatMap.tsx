@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Polygon, Tooltip } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Polygon,
+  Marker,
+  Tooltip,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { City } from "@/data/cities";
-import { hexagon } from "@/lib/geo";
+import { hexagon, type LatLng } from "@/lib/geo";
 import {
   cityRisks,
   LEVEL_COLORS,
@@ -13,16 +22,49 @@ import {
   type ZoneRisk,
 } from "@/lib/heat";
 
+export type MapFocus = { lat: number; lng: number; nonce: number } | null;
+
+const pinIcon = L.divIcon({
+  className: "",
+  html: '<div class="risk-pin">📍</div>',
+  iconSize: [26, 26],
+  iconAnchor: [13, 24],
+});
+
+function ClickCatcher({ onClick }: { onClick: (p: LatLng) => void }) {
+  useMapEvents({
+    click: (e) => onClick({ lat: e.latlng.lat, lng: e.latlng.lng }),
+  });
+  return null;
+}
+
+function FocusFly({ focus }: { focus: MapFocus }) {
+  const map = useMap();
+  const last = useRef(0);
+  useEffect(() => {
+    if (!focus || focus.nonce === last.current) return;
+    last.current = focus.nonce;
+    map.flyTo([focus.lat, focus.lng], 13, { duration: 1 });
+  }, [map, focus]);
+  return null;
+}
+
 export default function HeatMap({
   city,
   hour,
-  onZoneClick,
   selectedZoneId,
+  pinPoint,
+  focus = null,
+  onZoneClick,
+  onMapClick,
 }: {
   city: City;
   hour: number;
-  onZoneClick?: (risk: ZoneRisk) => void;
   selectedZoneId?: string | null;
+  pinPoint: LatLng | null;
+  focus?: MapFocus;
+  onZoneClick?: (risk: ZoneRisk) => void;
+  onMapClick: (p: LatLng) => void;
 }) {
   const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
   const hexes = useMemo(
@@ -82,6 +124,8 @@ export default function HeatMap({
       className="h-full w-full"
       style={{ background: "#0b0a0f" }}
     >
+      <ClickCatcher onClick={onMapClick} />
+      <FocusFly focus={focus} />
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -102,7 +146,12 @@ export default function HeatMap({
           <Polygon
             key={`${r.zone.id}-${cls}`}
             positions={hexes.get(r.zone.id)!}
-            eventHandlers={{ click: () => onZoneClick?.(r) }}
+            eventHandlers={{
+              click: (e) => {
+                L.DomEvent.stopPropagation(e);
+                onZoneClick?.(r);
+              },
+            }}
             pathOptions={{
               color: selected ? "#ffffff" : color,
               weight: selected ? 2.5 : 1.5,
@@ -120,6 +169,15 @@ export default function HeatMap({
           </Polygon>
         );
       })}
+
+      {pinPoint && (
+        <Marker
+          position={[pinPoint.lat, pinPoint.lng]}
+          icon={pinIcon}
+          zIndexOffset={1200}
+          interactive={false}
+        />
+      )}
     </MapContainer>
   );
 }

@@ -5,9 +5,17 @@ import dynamic from "next/dynamic";
 import ControlBar, { type PlayState } from "@/components/ControlBar";
 import { TitleChip, BulletinCard } from "@/components/Overlays";
 import { WarningBanners, AlertLog } from "@/components/Alerts";
+import {
+  HotspotTable,
+  ExplainCard,
+  PointRiskCard,
+} from "@/components/Dashboard";
+import type { MapFocus } from "@/components/HeatMap";
 import { cities, defaultCity } from "@/data/cities";
+import type { LatLng } from "@/lib/geo";
 import {
   cityRisks,
+  pointRisk,
   DAY_START,
   DAY_END,
   type RiskLevel,
@@ -37,11 +45,22 @@ export default function Home() {
   const [city, setCity] = useState(defaultCity);
   const [hour, setHour] = useState(DAY_START);
   const [playState, setPlayState] = useState<PlayState>("idle");
-  const [selected, setSelected] = useState<ZoneRisk | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pin, setPin] = useState<LatLng | null>(null);
+  const [focus, setFocus] = useState<MapFocus>(null);
   const rafRef = useRef<number | null>(null);
   const startProgressRef = useRef(0);
 
   const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
+  // Selected zone's risk, recomputed live as the hour moves.
+  const selected = useMemo(
+    () => risks.find((r) => r.zone.id === selectedId) ?? null,
+    [risks, selectedId]
+  );
+  const pinRisk = useMemo(
+    () => (pin ? pointRisk(city, pin, hour) : null),
+    [city, pin, hour]
+  );
 
   // ── Threshold alerts + banners ──────────────────────────────────────
   const [alerts, setAlerts] = useState<HeatAlert[]>([]);
@@ -156,13 +175,22 @@ export default function Home() {
       setCity(next);
       setHour(DAY_START);
       setPlayState("idle");
-      setSelected(null);
+      setSelectedId(null);
+      setPin(null);
+      setFocus(null);
       setAlerts([]);
       setBanners([]);
       prevLevelsRef.current = new Map();
     },
     [stopAnimation]
   );
+
+  const selectZone = useCallback((r: ZoneRisk, fly: boolean) => {
+    setSelectedId(r.zone.id);
+    setPin(null);
+    if (fly)
+      setFocus({ lat: r.zone.center.lat, lng: r.zone.center.lng, nonce: Date.now() });
+  }, []);
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#0b0a0f]">
@@ -171,8 +199,14 @@ export default function Home() {
         key={city.id}
         city={city}
         hour={hour}
-        selectedZoneId={selected?.zone.id ?? null}
-        onZoneClick={setSelected}
+        selectedZoneId={selectedId}
+        pinPoint={pin}
+        focus={focus}
+        onZoneClick={(r) => selectZone(r, false)}
+        onMapClick={(p) => {
+          setPin(p);
+          setSelectedId(null);
+        }}
       />
 
       <div className="vignette z-[900]" />
@@ -181,10 +215,31 @@ export default function Home() {
       <TitleChip city={city} onCityChange={handleCityChange} />
       <WarningBanners banners={banners} />
 
+      {/* Hotspot dashboard (left) */}
+      <div className="absolute left-3 top-[78px] z-[1000] w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:left-5 sm:top-[86px]">
+        <HotspotTable
+          risks={risks}
+          hour={hour}
+          selectedId={selectedId}
+          onSelect={(r) => selectZone(r, true)}
+        />
+        {selected && (
+          <ExplainCard risk={selected} onClose={() => setSelectedId(null)} />
+        )}
+        {!selected && (
+          <div className="mt-2 text-[10px] text-neutral-500">
+            Click a row or a zone for the factor breakdown · click anywhere on
+            the map for the risk at that spot
+          </div>
+        )}
+      </div>
+
       <div className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-3 sm:right-5 sm:top-5">
         <BulletinCard city={city} hour={hour} risks={risks} />
         <AlertLog alerts={alerts} onAck={acknowledge} />
       </div>
+
+      {pinRisk && <PointRiskCard risk={pinRisk} onClose={() => setPin(null)} />}
 
       <ControlBar
         hour={hour}

@@ -88,3 +88,16 @@ body {
   30%  { stroke-width: 5;   stroke-opacity: 1; fill-opacity: 0.9;  filter: drop-shadow(0 0 14px rgba(255, 120, 60, 0.9)); }
   100% { stroke-width: 1.5; stroke-opacity: 0.9; filter: drop-shadow(0 0 0 rgba(255, 120, 60, 0)); }
 }
+
+/* Point-risk pin */
+.risk-pin {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+  animation: pin-drop 0.4s ease-out 1;
+}
+
+@keyframes pin-drop {
+  0%   { transform: translateY(-14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
