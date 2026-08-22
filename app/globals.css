@@ -225,3 +225,48 @@ body {
   .zone-selected, .coach-hint { animation: none; }
   .leaflet-interactive { transition: none; }
 }
+
+/* ── Zone labels on the map (landing-page heat theme) ── */
+.zone-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translateY(-4px);
+}
+
+.zone-label .zone-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffd7b5;
+  text-shadow:
+    0 0 6px rgba(249, 115, 22, 0.9),
+    0 0 16px rgba(239, 68, 68, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.zone-label .zone-hri {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 1px;
+  text-shadow: 0 0 10px currentColor, 0 0 22px currentColor, 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.zone-label.is-selected .zone-name,
+.zone-label.is-hovered .zone-name {
+  color: #ffffff;
+}
+
+.zone-label.is-selected .zone-hri {
+  font-size: 24px;
+}
+
+/* HRI numbers in panels */
+.hri-glow {
+  text-shadow: 0 0 12px currentColor, 0 0 28px rgba(249, 115, 22, 0.35);
+}

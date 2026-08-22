@@ -93,7 +93,7 @@ export function HotspotTable({
               </span>
               <CountUp
                 value={r.hri}
-                className="w-8 shrink-0 text-right font-mono text-sm font-bold tabular-nums"
+                className="hri-glow w-10 shrink-0 text-right font-mono text-lg font-extrabold tabular-nums"
                 style={{ color: LEVEL_COLORS[r.level] }}
               />
             </motion.button>
@@ -128,7 +128,7 @@ export function ExplainCard({
           <div className="mt-0.5 flex items-center gap-2">
             <CountUp
               value={risk.hri}
-              className="font-mono text-2xl font-bold tabular-nums"
+              className="hri-glow font-mono text-5xl font-extrabold leading-none tabular-nums"
               style={{ color: LEVEL_COLORS[risk.level] }}
             />
             <LevelBadge level={risk.level} />
@@ -322,7 +322,7 @@ export function PointRiskCard({
         </button>
       </div>
       <div className="mt-1.5 flex items-center gap-3">
-        <span className="font-mono text-3xl font-bold tabular-nums" style={{ color: LEVEL_COLORS[risk.level] }}>
+        <span className="hri-glow font-mono text-5xl font-extrabold leading-none tabular-nums" style={{ color: LEVEL_COLORS[risk.level] }}>
           <CountUp value={risk.hri} />
           <span className="text-sm text-neutral-500">/100</span>
         </span>

@@ -164,7 +164,7 @@ export function HriSection({
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span
-                    className="font-mono text-base font-bold tabular-nums"
+                    className="hri-glow font-mono text-2xl font-extrabold leading-none tabular-nums"
                     style={{ color: LEVEL_COLORS[r.level] }}
                   >
                     {r.hri}
@@ -325,7 +325,7 @@ export function ResidentResponse({
       </div>
 
       <div className="mt-2 flex items-center gap-2">
-        <span className="font-mono text-2xl font-bold" style={{ color: LEVEL_COLORS[risk.level] }}>
+        <span className="hri-glow font-mono text-4xl font-extrabold leading-none" style={{ color: LEVEL_COLORS[risk.level] }}>
           {risk.hri}
         </span>
         <LevelBadge level={risk.level} />

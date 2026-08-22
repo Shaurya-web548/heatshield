@@ -38,6 +38,15 @@ const pinIcon = L.divIcon({
   iconAnchor: [13, 24],
 });
 
+function zoneLabelIcon(name: string, hri: number, color: string, state: "" | "is-selected" | "is-hovered") {
+  return L.divIcon({
+    className: "",
+    html: `<div class="zone-label ${state}"><span class="zone-name">${name}</span><span class="zone-hri" style="color:${color}">${hri}</span></div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+}
+
 const coolingIcons = new Map<CoolingKind, L.DivIcon>();
 function coolingIcon(kind: CoolingKind) {
   let icon = coolingIcons.get(kind);
@@ -214,6 +223,22 @@ export default function HeatMap({
           </Polygon>
         );
       })}
+
+      {/* Zone labels: name + HRI, styled like the landing page */}
+      {risks.map((r) => (
+        <Marker
+          key={`label-${r.zone.id}`}
+          position={[r.zone.center.lat, r.zone.center.lng]}
+          icon={zoneLabelIcon(
+            r.zone.name.replace(/ \(.*\)$/, ""),
+            r.hri,
+            LEVEL_COLORS[r.level],
+            r.zone.id === selectedZoneId ? "is-selected" : r.zone.id === hoveredZoneId ? "is-hovered" : ""
+          )}
+          interactive={false}
+          zIndexOffset={700}
+        />
+      ))}
 
       {/* Cooling points: water kiosks, shade, ORS, cooling centres */}
       {city.coolingPoints.map((p) => (
