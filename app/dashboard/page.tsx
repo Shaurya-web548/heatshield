@@ -345,9 +345,9 @@ export default function DashboardPage() {
 
       {/* Left panel: sections */}
       <Enter
-        from="left"
+        from="right"
         delay={0.2}
-        className="absolute right-3 top-[284px] z-[1000] max-h-[calc(100vh-300px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:top-[86px] sm:right-5 sm:w-[22rem] sm:max-h-[calc(100vh-110px)]"
+        className="absolute left-3 top-[284px] z-[1000] max-h-[calc(100vh-300px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:top-[86px] sm:left-5 sm:w-[22rem] sm:max-h-[calc(100vh-110px)]"
       >
         <SectionNav view={view} onView={changeView} isAuthority={isAuthority} />
         <Switch id={`${view}-${showTable}`}>
@@ -457,9 +457,9 @@ export default function DashboardPage() {
       </Enter>
 
       <Enter
-        from="right"
+        from="left"
         delay={0.35}
-        className="absolute left-3 top-[86px] z-[1010] flex max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-start justify-start gap-2 sm:top-[86px] sm:left-5 sm:z-[1000] sm:max-h-[calc(100vh-110px)] sm:max-w-none sm:flex-col sm:items-start sm:gap-3 sm:overflow-y-auto"
+        className="absolute right-3 top-[86px] z-[1010] flex max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-start justify-end gap-2 sm:top-5 sm:right-5 sm:z-[1000] sm:max-h-[calc(100vh-110px)] sm:max-w-none sm:flex-col sm:items-end sm:gap-3 sm:overflow-y-auto"
       >
         <BulletinCard city={city} hour={hour} risks={risks} lastUpdated={lastUpdated} />
         <AdvisoryPanel advisory={advisory} hourLabel={formatHour(hour)} liveDot={isLive} />

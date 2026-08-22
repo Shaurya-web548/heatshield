@@ -52,7 +52,7 @@ export default function AdvisoryPanel({
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.8, delay: 1.2 }}
-      className={`${open ? "w-72 sm:w-80" : "w-auto"} max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 p-3 shadow-xl backdrop-blur-md sm:p-4`}
+      className={`${open ? "w-64" : "w-auto"} max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 p-2.5 shadow-xl backdrop-blur-md sm:p-3`}
     >
       <div className="flex items-center justify-between gap-2">
         <button className="flex items-center gap-2" onClick={() => setOpen((v) => !v)}>
@@ -91,16 +91,16 @@ export default function AdvisoryPanel({
         </div>
       </div>
 
-      <div className={open ? "mt-2 block" : "hidden"}>
+      <div className={open ? "mt-1.5 block" : "hidden"}>
         <span
-          className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider ${urgencyStyles[advisory.urgency]}`}
+          className={`inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${urgencyStyles[advisory.urgency]}`}
         >
           {advisory.urgency}
         </span>
-        <h2 className="mt-2 text-sm font-semibold leading-snug text-neutral-100">
+        <h2 className="mt-1.5 text-xs font-semibold leading-snug text-neutral-100">
           {advisory.headline}
         </h2>
-        <p className="mt-1.5 min-h-[6rem] text-[13px] leading-relaxed text-neutral-300">
+        <p className="mt-1 max-h-28 overflow-y-auto pr-0.5 text-[11px] leading-snug text-neutral-300">
           {typed}
           {typed.length < body.length && (
             <span className="animate-pulse text-orange-400">▍</span>
