@@ -20,6 +20,7 @@ import {
 } from "@/components/Sections";
 import AdvisoryPanel from "@/components/AdvisoryPanel";
 import { Enter, Switch } from "@/components/Motion";
+import { useDefaultCollapsedOnMobile } from "@/lib/useCollapsed";
 import { useLiveAdvisory } from "@/lib/useLiveAdvisory";
 import type { MapFocus } from "@/components/HeatMap";
 import {
@@ -35,6 +36,7 @@ import {
   pointRisk,
   formatHour,
   DEFAULT_PARAMS,
+  LEVEL_COLORS,
   type ZoneRisk,
 } from "@/lib/heat";
 import { recipientsFor, NOTIFY_LEVELS, type HeatAlert } from "@/lib/alerts";
@@ -83,6 +85,17 @@ export default function DashboardPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [coach, setCoach] = useState(false);
+  // Phone: the sections panel is a bottom sheet (peek / half / full)
+  const [sheet, setSheet] = useState<"peek" | "half" | "full">("half");
+  const [isPhone, setIsPhone] = useState(false);
+  const [hriOpen, toggleHri] = useDefaultCollapsedOnMobile();
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setIsPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   const [pin, setPin] = useState<LatLng | null>(null);
   const [focus, setFocus] = useState<MapFocus>(null);
   const [myZoneId, setMyZoneId] = useState<string>(defaultCity.zones[0].id);
@@ -275,9 +288,11 @@ export default function DashboardPage() {
     setSelectedId(r.zone.id);
     setMyZoneId(r.zone.id);
     setPin(null);
+    if (!hriOpen) toggleHri();
     if (fly)
       setFocus({ lat: r.zone.center.lat, lng: r.zone.center.lng, nonce: Date.now() });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hriOpen]);
 
   const changeView = (v: View) => {
     setView(v);
@@ -337,9 +352,9 @@ export default function DashboardPage() {
       <WarningBanners banners={banners} />
 
       {coach && (
-        <div className="coach-hint pointer-events-none absolute left-1/2 top-[58%] z-[1020] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-4 py-2 text-xs text-neutral-200 shadow-2xl backdrop-blur-md">
-          👆 Hover a zone to highlight it · click it for the factors behind its score ·
-          click any street for the risk there
+        <div className="coach-hint pointer-events-none absolute left-1/2 top-[34%] z-[1020] max-w-[90vw] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-4 py-2 text-center text-xs text-neutral-200 shadow-2xl backdrop-blur-md sm:top-[58%]">
+          <span className="sm:hidden">👆 Tap a zone for its score · tap a street for the risk there</span>
+          <span className="hidden sm:inline">👆 Hover a zone to highlight it · click it for the factors behind its score · click any street for the risk there</span>
         </div>
       )}
 
@@ -347,9 +362,28 @@ export default function DashboardPage() {
       <Enter
         from="right"
         delay={0.2}
-        className="absolute left-3 top-[284px] z-[1000] max-h-[calc(100vh-300px)] w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3.5 shadow-xl backdrop-blur-md sm:top-[86px] sm:left-5 sm:w-[22rem] sm:max-h-[calc(100vh-110px)]"
+        className="absolute z-[1000] overflow-y-auto border border-white/10 bg-black/80 shadow-xl backdrop-blur-md transition-[max-height] duration-300 max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-2xl max-sm:px-3 max-sm:pb-3 max-sm:pt-2 sm:left-5 sm:top-[86px] sm:max-h-[calc(100vh-110px)] sm:w-[22rem] sm:rounded-xl sm:p-3.5"
+        style={
+          isPhone
+            ? { maxHeight: sheet === "peek" ? 64 : sheet === "half" ? "46vh" : "86vh" }
+            : undefined
+        }
       >
-        <SectionNav view={view} onView={changeView} isAuthority={isAuthority} />
+        <button
+          onClick={() => setSheet((s) => (s === "peek" ? "half" : s === "half" ? "full" : "peek"))}
+          aria-label="Resize panel"
+          className="block w-full sm:hidden"
+        >
+          <div className="sheet-handle" />
+        </button>
+        <SectionNav
+          view={view}
+          onView={(v) => {
+            changeView(v);
+            setSheet((s) => (s === "peek" ? "half" : s));
+          }}
+          isAuthority={isAuthority}
+        />
         <Switch id={`${view}-${showTable}`}>
 
         {view === "hotspots" && (
@@ -460,19 +494,43 @@ export default function DashboardPage() {
         className="absolute right-3 top-[86px] z-[1010] flex max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-start justify-end gap-2 sm:top-5 sm:right-5 sm:z-[1000] sm:max-h-[calc(100vh-110px)] sm:max-w-none sm:flex-col sm:items-end sm:gap-3 sm:overflow-y-auto"
       >
         <BulletinCard city={city} hour={hour} risks={risks} lastUpdated={lastUpdated} />
-        <div className="w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 px-3 pb-3 pt-2.5 shadow-xl backdrop-blur-md">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-            📐 Heat-Risk Index · {selected ? "selected zone" : "top hotspot"}
-          </div>
-          <ExplainCard
-            risk={selected ?? risks[0]}
-            onClose={() => setSelectedId(null)}
-          />
+        <div
+          className={`${hriOpen ? "w-72" : "w-auto"} max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 px-3 pb-2.5 pt-2.5 shadow-xl backdrop-blur-md`}
+        >
+          <button
+            onClick={toggleHri}
+            className="flex w-full items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400"
+          >
+            <span>📐 Heat-Risk Index · {selected ? "selected zone" : "top hotspot"}</span>
+            <span>{hriOpen ? "✕" : "▸"}</span>
+          </button>
+          {!hriOpen && (
+            <div className="mt-0.5 text-xs text-neutral-200">
+              {(selected ?? risks[0]).zone.name}{" "}
+              <span
+                className="hri-glow font-mono text-base font-extrabold"
+                style={{ color: LEVEL_COLORS[(selected ?? risks[0]).level] }}
+              >
+                {(selected ?? risks[0]).hri}
+              </span>
+            </div>
+          )}
+          {hriOpen && (
+            <ExplainCard
+              risk={selected ?? risks[0]}
+              onClose={() => {
+                setSelectedId(null);
+                toggleHri();
+              }}
+            />
+          )}
         </div>
       </Enter>
 
       {pinRisk && pinCooling && (
-        <PointRiskCard risk={pinRisk} cooling={pinCooling} onClose={() => setPin(null)} />
+        <div className="max-sm:absolute max-sm:inset-x-3 max-sm:top-[190px] max-sm:z-[1015]">
+          <PointRiskCard risk={pinRisk} cooling={pinCooling} onClose={() => setPin(null)} />
+        </div>
       )}
 
       <AuthModal

@@ -14,11 +14,13 @@ export function Enter({
   delay = 0,
   from = "up",
   className,
+  style,
 }: {
   children: ReactNode;
   delay?: number;
   from?: "up" | "down" | "left" | "right";
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const offset = { up: { y: 14 }, down: { y: -14 }, left: { x: 14 }, right: { x: -14 } }[from];
   return (
@@ -27,6 +29,7 @@ export function Enter({
       animate={{ opacity: 1, x: 0, y: 0 }}
       transition={{ ...BASE, delay }}
       className={className}
+      style={style}
     >
       {children}
     </motion.div>

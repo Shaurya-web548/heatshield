@@ -301,7 +301,7 @@ export function PointRiskCard({
       initial={{ opacity: 0, y: 14, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={FAST}
-      className="absolute bottom-20 left-3 z-[1000] w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/75 p-3.5 shadow-xl backdrop-blur-md sm:bottom-5 sm:left-5"
+      className="z-[1000] w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/75 p-3.5 shadow-xl backdrop-blur-md max-sm:w-full max-sm:max-w-none sm:absolute sm:bottom-5 sm:left-5"
     >
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
