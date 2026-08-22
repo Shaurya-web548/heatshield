@@ -101,7 +101,10 @@ export default function HeatBackground() {
   }, []);
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    // Fixed to the viewport: the fire line stays at the bottom of the screen and
+    // the embers keep drifting while the page scrolls (the canvas is only one
+    // viewport tall).
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
       {/* heat haze gradients */}
       <div className="heat-blob heat-blob-1" />
       <div className="heat-blob heat-blob-2" />
