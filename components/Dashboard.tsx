@@ -104,17 +104,40 @@ export function HotspotTable({
   );
 }
 
-/** "Why is this zone HIGH?" — weighted-composite breakdown. */
+export type PointContext = {
+  nearestName: string;
+  distanceKm: number;
+  cooling: { name: string; label: string; icon: string; distanceKm: number };
+};
+
+/** Advice for someone standing there right now. */
+function workerAdvice(level: string) {
+  if (level === "CRITICAL")
+    return "Stop outdoor work. Move to shade or a cooling point now; drink water every 20 minutes.";
+  if (level === "HIGH")
+    return "Limit outdoor work to essential tasks; take shade breaks every 30 minutes.";
+  if (level === "MODERATE")
+    return "Carry water, use head cover; plan heavy work before noon.";
+  return "Conditions are manageable. Stay hydrated.";
+}
+
+/**
+ * "Why is this zone HIGH?" — weighted-composite breakdown. With `point` set it
+ * explains a spot clicked on the map instead of a zone, so one card on the
+ * right always answers "what is the HRI of the thing I just clicked?".
+ */
 export function ExplainCard({
   risk,
+  point = null,
   onClose,
 }: {
   risk: ZoneRisk;
+  point?: PointContext | null;
   onClose: () => void;
 }) {
   return (
     <motion.div
-      key={risk.zone.id}
+      key={`${risk.zone.id}-${risk.hri}`}
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={FAST}
@@ -123,7 +146,9 @@ export function ExplainCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-            Why is {risk.zone.name} {risk.level}?
+            {point
+              ? "📍 Heat risk at this spot"
+              : `Why is ${risk.zone.name} ${risk.level}?`}
           </div>
           <div className="mt-0.5 flex items-center gap-2">
             <CountUp
@@ -143,6 +168,13 @@ export function ExplainCard({
         </button>
       </div>
 
+      {point && (
+        <div className="mt-1 text-[11px] text-neutral-400">
+          {point.distanceKm.toFixed(1)} km from {point.nearestName} centre ·
+          blended from the three nearest zones
+        </div>
+      )}
+
       <div className="mt-1.5 grid grid-cols-[1fr_auto_auto_auto] gap-x-2 gap-y-0.5 text-[10px]">
         <span className="text-neutral-500">factor · reading</span>
         <span className="text-right text-neutral-500">norm</span>
@@ -157,6 +189,23 @@ export function ExplainCard({
         <span className="text-neutral-400">Indicative feels-like on the street</span>
         <span className="font-mono text-orange-200">{risk.feelsLikeC.toFixed(1)} °C</span>
       </div>
+
+      {point && (
+        <>
+          <div className="mt-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-neutral-200">
+            {workerAdvice(risk.level)}
+          </div>
+          <div className="mt-1.5 text-[11px] text-neutral-400">
+            Nearest relief:{" "}
+            <span className="text-sky-200">
+              {point.cooling.icon} {point.cooling.name}
+            </span>{" "}
+            <span className="text-neutral-500">
+              · {point.cooling.label} · {point.cooling.distanceKm.toFixed(1)} km
+            </span>
+          </div>
+        </>
+      )}
 
       <div className="mt-1.5 text-[10px] leading-snug text-neutral-500">
         Bands: Low 0–{THRESHOLDS.MODERATE - 1} · Moderate {THRESHOLDS.MODERATE}–
@@ -283,71 +332,5 @@ export function ZoneTable({
         Static fields from the GIS/satellite snapshot; dynamic fields recomputed each hour.
       </div>
     </div>
-  );
-}
-
-/** Click-anywhere point risk for a worker's exact spot. */
-export function PointRiskCard({
-  risk,
-  cooling,
-  onClose,
-}: {
-  risk: ZoneRisk & { nearest: { name: string }; distanceKm: number };
-  cooling: { name: string; label: string; icon: string; distanceKm: number };
-  onClose: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={FAST}
-      className="z-[1000] w-72 max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/75 p-3.5 shadow-xl backdrop-blur-md max-sm:w-full max-sm:max-w-none sm:absolute sm:bottom-5 sm:left-5"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          📍 Heat risk at this spot
-        </span>
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="rounded px-1.5 text-xs text-neutral-500 transition hover:bg-white/10 hover:text-white"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="mt-1.5 flex items-center gap-3">
-        <span className="hri-glow font-mono text-5xl font-extrabold leading-none tabular-nums" style={{ color: LEVEL_COLORS[risk.level] }}>
-          <CountUp value={risk.hri} />
-          <span className="text-sm text-neutral-500">/100</span>
-        </span>
-        <LevelBadge level={risk.level} />
-      </div>
-      <div className="mt-1 text-[11px] text-neutral-400">
-        Feels like{" "}
-        <span className="font-mono text-orange-200">
-          {risk.feelsLikeC.toFixed(0)} °C
-        </span>{" "}
-        · surface {risk.lstC.toFixed(0)} °C · {risk.distanceKm.toFixed(1)} km from{" "}
-        {risk.nearest.name} centre
-      </div>
-      <div className="mt-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-neutral-200">
-        {risk.level === "CRITICAL"
-          ? "Stop outdoor work. Move to shade or a cooling point now; drink water every 20 minutes."
-          : risk.level === "HIGH"
-            ? "Limit outdoor work to essential tasks; take shade breaks every 30 minutes."
-            : risk.level === "MODERATE"
-              ? "Carry water, use head cover; plan heavy work before noon."
-              : "Conditions are manageable. Stay hydrated."}
-      </div>
-      <div className="mt-1.5 text-[11px] text-neutral-400">
-        Nearest relief:{" "}
-        <span className="text-sky-200">
-          {cooling.icon} {cooling.name}
-        </span>{" "}
-        <span className="text-neutral-500">
-          · {cooling.label} · {cooling.distanceKm.toFixed(1)} km
-        </span>
-      </div>
-    </motion.div>
   );
 }

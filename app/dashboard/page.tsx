@@ -4,12 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { TitleChip, BulletinCard } from "@/components/Overlays";
 import { WarningBanners } from "@/components/Alerts";
-import {
-  HotspotTable,
-  ExplainCard,
-  PointRiskCard,
-  ZoneTable,
-} from "@/components/Dashboard";
+import { HotspotTable, ExplainCard, ZoneTable } from "@/components/Dashboard";
 import { AuthModal, ResponseConsole } from "@/components/Response";
 import {
   SectionNav,
@@ -154,6 +149,19 @@ export default function DashboardPage() {
       distanceKm: n.distanceKm,
     };
   }, [city, pin]);
+
+  // One HRI card on the right, always about the last thing the user touched:
+  // a clicked spot, else the selected zone, else the day's top hotspot.
+  const focusRisk = pinRisk ?? selected ?? risks[0];
+  const focusLabel = pinRisk ? "clicked spot" : selected ? "selected zone" : "top hotspot";
+  const pointContext =
+    pinRisk && pinCooling
+      ? {
+          nearestName: pinRisk.nearest.name,
+          distanceKm: pinRisk.distanceKm,
+          cooling: pinCooling,
+        }
+      : null;
 
   const generated = useMemo(
     () => generateAdvisory(city, hour, risks, DEFAULT_PARAMS),
@@ -321,6 +329,9 @@ export default function DashboardPage() {
           setPin(p);
           setSelectedId(null);
           setMyZoneId(pointRisk(city, p, hour).nearest.id);
+          if (!hriOpen) toggleHri();
+          // Phone: drop the sheet out of the way so the spot's card is visible.
+          if (isPhone) setSheet("peek");
         }}
       />
 
@@ -501,37 +512,33 @@ export default function DashboardPage() {
             onClick={toggleHri}
             className="flex w-full items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400"
           >
-            <span>📐 Heat-Risk Index · {selected ? "selected zone" : "top hotspot"}</span>
+            <span>📐 Heat-Risk Index · {focusLabel}</span>
             <span>{hriOpen ? "✕" : "▸"}</span>
           </button>
           {!hriOpen && (
             <div className="mt-0.5 text-xs text-neutral-200">
-              {(selected ?? risks[0]).zone.name}{" "}
+              {pinRisk ? "📍 This spot" : focusRisk.zone.name}{" "}
               <span
                 className="hri-glow font-mono text-base font-extrabold"
-                style={{ color: LEVEL_COLORS[(selected ?? risks[0]).level] }}
+                style={{ color: LEVEL_COLORS[focusRisk.level] }}
               >
-                {(selected ?? risks[0]).hri}
+                {focusRisk.hri}
               </span>
             </div>
           )}
           {hriOpen && (
             <ExplainCard
-              risk={selected ?? risks[0]}
+              risk={focusRisk}
+              point={pointContext}
               onClose={() => {
                 setSelectedId(null);
+                setPin(null);
                 toggleHri();
               }}
             />
           )}
         </div>
       </Enter>
-
-      {pinRisk && pinCooling && (
-        <div className="max-sm:absolute max-sm:inset-x-3 max-sm:top-[190px] max-sm:z-[1015]">
-          <PointRiskCard risk={pinRisk} cooling={pinCooling} onClose={() => setPin(null)} />
-        </div>
-      )}
 
       <AuthModal
         open={authOpen}

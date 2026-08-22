@@ -52,8 +52,9 @@ official ward boundaries.
    Bopal — same IMD number, 20 points apart.
 3. **📐 Heat-Risk Index** — the formula, the weights, the normalization, and
    every zone's score with factor bars beneath it.
-4. Click a street on the map: point risk, "Stop outdoor work… nearest
-   relief: Manek Chowk ORS point, 2.3 km". Toggle हिन्दी on the advisory.
+4. Click a street on the map: the HRI card on the right switches to that spot —
+   its factors, "Limit outdoor work… nearest relief: Kalupur station water
+   kiosk". Toggle हिन्दी on the advisory.
 5. **🔔 Threshold alerts** — each High/Critical zone with who was notified
    (ward officer, health centre, traffic control).
 6. **🛡️ Response tracking** — as a resident: "no relief dispatched yet for

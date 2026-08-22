@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -31,6 +31,10 @@ import {
 
 export type MapFocus = { lat: number; lng: number; nonce: number } | null;
 
+/** Breathing room between two labels, and how far off-screen one still counts. */
+const LABEL_GAP = 5;
+const LABEL_MARGIN = 120;
+
 const pinIcon = L.divIcon({
   className: "",
   html: '<div class="risk-pin">📍</div>',
@@ -38,13 +42,43 @@ const pinIcon = L.divIcon({
   iconAnchor: [13, 24],
 });
 
-function zoneLabelIcon(name: string, hri: number, color: string, state: "" | "is-selected" | "is-hovered") {
+/** A label is drawn in full, cut down to the bare HRI number, or dropped. */
+type LabelMode = "full" | "compact";
+
+function zoneLabelIcon(
+  name: string,
+  hri: number,
+  color: string,
+  state: "" | "is-selected" | "is-hovered",
+  mode: LabelMode
+) {
+  const nameHtml = mode === "full" ? `<span class="zone-name">${name}</span>` : "";
   return L.divIcon({
     className: "",
-    html: `<div class="zone-label ${state}"><span class="zone-name">${name}</span><span class="zone-hri" style="color:${color}">${hri}</span></div>`,
+    html: `<div class="zone-label ${state}">${nameHtml}<span class="zone-hri" style="color:${color}">${hri}</span></div>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
+}
+
+const shortName = (name: string) => name.replace(/ \(.*\)$/, "");
+
+/** Text width for the collision maths, measured once per (size, string). */
+const widthCache = new Map<string, number>();
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function textWidth(text: string, fontPx: number) {
+  const key = `${fontPx}|${text}`;
+  const cached = widthCache.get(key);
+  if (cached !== undefined) return cached;
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  if (measureCtx) measureCtx.font = `700 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+  // The extra term is the 0.04em letter-spacing; 0.62em/char is the fallback
+  // when no canvas context is available.
+  const width = measureCtx
+    ? measureCtx.measureText(text).width + text.length * fontPx * 0.04
+    : text.length * fontPx * 0.62;
+  widthCache.set(key, width);
+  return width;
 }
 
 const coolingIcons = new Map<CoolingKind, L.DivIcon>();
@@ -60,6 +94,106 @@ function coolingIcon(kind: CoolingKind) {
     coolingIcons.set(kind, icon);
   }
   return icon;
+}
+
+/**
+ * Zone labels (name + HRI), decluttered: at low zooms the boxes collide, so the
+ * lower-ranked label drops its name — and if even the number will not fit, the
+ * label is skipped. Selected / hovered zones always win the space.
+ */
+function ZoneLabels({
+  risks,
+  selectedZoneId,
+  hoveredZoneId,
+}: {
+  risks: ZoneRisk[];
+  selectedZoneId?: string | null;
+  hoveredZoneId?: string | null;
+}) {
+  const map = useMap();
+  const [modes, setModes] = useState<Map<string, LabelMode>>(new Map());
+
+  const declutter = useCallback(() => {
+    const phone = window.matchMedia("(max-width: 639px)").matches;
+    const nameFont = phone ? 8 : 11;
+    const hriFont = phone ? 14 : 20;
+    const fullHeight = nameFont + 6 + hriFont + 3;
+    const size = map.getSize();
+    const rank = (id: string) => (id === selectedZoneId ? 0 : id === hoveredZoneId ? 1 : 2);
+    // risks arrive sorted by HRI, so ties keep the hotter zone in front.
+    const ordered = risks
+      .map((risk, index) => ({ risk, index }))
+      .sort((a, b) => rank(a.risk.zone.id) - rank(b.risk.zone.id) || a.index - b.index);
+
+    const placed: [number, number, number, number][] = [];
+    const fits = (box: [number, number, number, number]) =>
+      placed.every(([x0, y0, x1, y1]) => box[0] > x1 || box[2] < x0 || box[1] > y1 || box[3] < y0);
+
+    const next = new Map<string, LabelMode>();
+    for (const { risk } of ordered) {
+      const p = map.latLngToContainerPoint([risk.zone.center.lat, risk.zone.center.lng]);
+      const offscreen =
+        p.x < -LABEL_MARGIN ||
+        p.y < -LABEL_MARGIN ||
+        p.x > size.x + LABEL_MARGIN ||
+        p.y > size.y + LABEL_MARGIN;
+      if (offscreen) continue;
+      const box = (w: number, h: number): [number, number, number, number] => [
+        p.x - w / 2 - LABEL_GAP,
+        p.y - 4,
+        p.x + w / 2 + LABEL_GAP,
+        p.y - 4 + h + LABEL_GAP,
+      ];
+      const full = box(
+        Math.max(textWidth(shortName(risk.zone.name).toUpperCase(), nameFont), hriFont * 1.6),
+        fullHeight
+      );
+      if (fits(full)) {
+        next.set(risk.zone.id, "full");
+        placed.push(full);
+        continue;
+      }
+      const compact = box(textWidth(String(risk.hri), hriFont), hriFont + 3);
+      if (fits(compact)) {
+        next.set(risk.zone.id, "compact");
+        placed.push(compact);
+      }
+    }
+    setModes(next);
+  }, [map, risks, selectedZoneId, hoveredZoneId]);
+
+  // Panning keeps the labels in the same relative positions; only zoom, resize
+  // and the fly-ins (which end in moveend) can change what collides.
+  useMapEvents({ zoomend: declutter, moveend: declutter, resize: declutter });
+  useEffect(declutter, [declutter]);
+
+  return (
+    <>
+      {risks.map((r) => {
+        const mode = modes.get(r.zone.id);
+        if (!mode) return null;
+        return (
+          <Marker
+            key={`label-${r.zone.id}`}
+            position={[r.zone.center.lat, r.zone.center.lng]}
+            icon={zoneLabelIcon(
+              shortName(r.zone.name),
+              r.hri,
+              LEVEL_COLORS[r.level],
+              r.zone.id === selectedZoneId
+                ? "is-selected"
+                : r.zone.id === hoveredZoneId
+                  ? "is-hovered"
+                  : "",
+              mode
+            )}
+            interactive={false}
+            zIndexOffset={700}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 function ClickCatcher({ onClick }: { onClick: (p: LatLng) => void }) {
@@ -225,20 +359,11 @@ export default function HeatMap({
       })}
 
       {/* Zone labels: name + HRI, styled like the landing page */}
-      {risks.map((r) => (
-        <Marker
-          key={`label-${r.zone.id}`}
-          position={[r.zone.center.lat, r.zone.center.lng]}
-          icon={zoneLabelIcon(
-            r.zone.name.replace(/ \(.*\)$/, ""),
-            r.hri,
-            LEVEL_COLORS[r.level],
-            r.zone.id === selectedZoneId ? "is-selected" : r.zone.id === hoveredZoneId ? "is-hovered" : ""
-          )}
-          interactive={false}
-          zIndexOffset={700}
-        />
-      ))}
+      <ZoneLabels
+        risks={risks}
+        selectedZoneId={selectedZoneId}
+        hoveredZoneId={hoveredZoneId}
+      />
 
       {/* Cooling points: water kiosks, shade, ORS, cooling centres */}
       {city.coolingPoints.map((p) => (
