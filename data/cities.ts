@@ -32,6 +32,30 @@ export type ImdBulletin = {
   colourCode: "Green" | "Yellow" | "Orange" | "Red";
 };
 
+export type CoolingKind = "water" | "shade" | "ors" | "centre";
+
+export type CoolingPoint = {
+  id: string;
+  name: string;
+  kind: CoolingKind;
+  lat: number;
+  lng: number;
+};
+
+export const COOLING_ICON: Record<CoolingKind, string> = {
+  water: "💧",
+  shade: "⛱️",
+  ors: "🧂",
+  centre: "❄️",
+};
+
+export const COOLING_LABEL: Record<CoolingKind, string> = {
+  water: "Water kiosk",
+  shade: "Shaded rest stop",
+  ors: "ORS point",
+  centre: "Cooling centre",
+};
+
 export type City = {
   id: string;
   name: string;
@@ -40,8 +64,17 @@ export type City = {
   zoom: number;
   imd: ImdBulletin;
   zones: Zone[];
+  coolingPoints: CoolingPoint[];
   whyHere: string;
 };
+
+const cp = (
+  id: string,
+  name: string,
+  kind: CoolingKind,
+  lat: number,
+  lng: number
+): CoolingPoint => ({ id, name, kind, lat, lng });
 
 const z = (
   id: string,
@@ -83,6 +116,15 @@ export const cities: City[] = [
       z("chandkheda", "Chandkheda", 23.11, 72.59, 1.5, 52000, { treeCover: 0.2, builtUp: 0.6, traffic: 0.4, surface: 0.6, workers: 0.35 }),
       z("odhav", "Odhav", 23.03, 72.67, 1.4, 58000, { treeCover: 0.07, builtUp: 0.8, traffic: 0.5, surface: 0.85, workers: 0.6 }),
     ],
+    coolingPoints: [
+      cp("kalupur-water", "Kalupur station water kiosk", "water", 23.026, 72.601),
+      cp("manekchowk-ors", "Manek Chowk ORS point", "ors", 23.023, 72.588),
+      cp("laldarwaja-shade", "Lal Darwaja shaded rest stop", "shade", 23.027, 72.58),
+      cp("maninagar-centre", "Maninagar cooling centre", "centre", 23.0, 72.605),
+      cp("naroda-water", "Naroda water tanker point", "water", 23.07, 72.655),
+      cp("riverfront-shade", "Sabarmati riverfront shade", "shade", 23.045, 72.57),
+      cp("vatva-ors", "Vatva GIDC ORS point", "ors", 22.962, 72.625),
+    ],
     whyHere:
       "Ahmedabad launched India's first Heat Action Plan in 2013 after the 2010 heatwave; it remains the national reference for city-level heat response.",
   },
@@ -114,6 +156,15 @@ export const cities: City[] = [
       z("dwarka", "Dwarka", 28.59, 77.05, 1.6, 120000, { treeCover: 0.22, builtUp: 0.6, traffic: 0.5, surface: 0.6, workers: 0.35 }),
       z("saket", "Saket", 28.52, 77.21, 1.2, 60000, { treeCover: 0.28, builtUp: 0.65, traffic: 0.6, surface: 0.6, workers: 0.4 }),
       z("ridge", "Central Ridge / Lutyens", 28.61, 77.18, 1.4, 25000, { treeCover: 0.6, builtUp: 0.25, traffic: 0.35, surface: 0.3, workers: 0.25 }),
+    ],
+    coolingPoints: [
+      cp("chandni-water", "Chandni Chowk water kiosk", "water", 28.656, 77.232),
+      cp("cp-shade", "Palika Bazar shaded rest stop", "shade", 28.632, 77.218),
+      cp("karolbagh-ors", "Karol Bagh ORS point", "ors", 28.651, 77.19),
+      cp("anandvihar-centre", "Anand Vihar ISBT cooling centre", "centre", 28.647, 77.316),
+      cp("nehruplace-water", "Nehru Place water kiosk", "water", 28.549, 77.251),
+      cp("okhla-shade", "Okhla Phase II shaded rest stop", "shade", 28.532, 77.272),
+      cp("lajpat-ors", "Lajpat Nagar ORS point", "ors", 28.568, 77.243),
     ],
     whyHere:
       "Delhi recorded its highest-ever temperatures in the May 2024 heatwave; its outdoor workforce is among the largest in the country.",

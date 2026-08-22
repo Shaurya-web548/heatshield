@@ -181,9 +181,11 @@ export function ExplainCard({
 /** Click-anywhere point risk for a worker's exact spot. */
 export function PointRiskCard({
   risk,
+  cooling,
   onClose,
 }: {
   risk: ZoneRisk & { nearest: { name: string }; distanceKm: number };
+  cooling: { name: string; label: string; icon: string; distanceKm: number };
   onClose: () => void;
 }) {
   return (
@@ -229,6 +231,15 @@ export function PointRiskCard({
             : risk.level === "WATCH"
               ? "Carry water, use head cover; plan heavy work before noon."
               : "Conditions are manageable. Stay hydrated."}
+      </div>
+      <div className="mt-1.5 text-[11px] text-neutral-400">
+        Nearest relief:{" "}
+        <span className="text-sky-200">
+          {cooling.icon} {cooling.name}
+        </span>{" "}
+        <span className="text-neutral-500">
+          · {cooling.label} · {cooling.distanceKm.toFixed(1)} km
+        </span>
       </div>
     </motion.div>
   );

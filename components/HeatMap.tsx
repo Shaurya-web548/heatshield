@@ -12,7 +12,12 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { City } from "@/data/cities";
+import {
+  type City,
+  type CoolingKind,
+  COOLING_ICON,
+  COOLING_LABEL,
+} from "@/data/cities";
 import { hexagon, type LatLng } from "@/lib/geo";
 import {
   cityRisks,
@@ -30,6 +35,21 @@ const pinIcon = L.divIcon({
   iconSize: [26, 26],
   iconAnchor: [13, 24],
 });
+
+const coolingIcons = new Map<CoolingKind, L.DivIcon>();
+function coolingIcon(kind: CoolingKind) {
+  let icon = coolingIcons.get(kind);
+  if (!icon) {
+    icon = L.divIcon({
+      className: "",
+      html: `<div class="cool-dot">${COOLING_ICON[kind]}</div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+    coolingIcons.set(kind, icon);
+  }
+  return icon;
+}
 
 function ClickCatcher({ onClick }: { onClick: (p: LatLng) => void }) {
   useMapEvents({
@@ -169,6 +189,21 @@ export default function HeatMap({
           </Polygon>
         );
       })}
+
+      {/* Cooling points: water kiosks, shade, ORS, cooling centres */}
+      {city.coolingPoints.map((p) => (
+        <Marker
+          key={p.id}
+          position={[p.lat, p.lng]}
+          icon={coolingIcon(p.kind)}
+          zIndexOffset={600}
+          eventHandlers={{ click: (e) => L.DomEvent.stopPropagation(e) }}
+        >
+          <Tooltip direction="top" offset={[0, -10]}>
+            {COOLING_ICON[p.kind]} {p.name} · {COOLING_LABEL[p.kind]}
+          </Tooltip>
+        </Marker>
+      ))}
 
       {pinPoint && (
         <Marker

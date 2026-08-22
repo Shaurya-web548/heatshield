@@ -22,6 +22,10 @@ import {
   type ZoneRisk,
 } from "@/lib/heat";
 import { detectEscalations, alertBanners, type HeatAlert } from "@/lib/alerts";
+import { generateAdvisory, nearestCooling } from "@/lib/advisories";
+import { COOLING_ICON, COOLING_LABEL } from "@/data/cities";
+import AdvisoryPanel from "@/components/AdvisoryPanel";
+import { formatHour } from "@/lib/heat";
 
 // Leaflet touches `window` at module scope — it must never run during SSR.
 const HeatMap = dynamic(() => import("@/components/HeatMap"), {
@@ -60,6 +64,23 @@ export default function Home() {
   const pinRisk = useMemo(
     () => (pin ? pointRisk(city, pin, hour) : null),
     [city, pin, hour]
+  );
+  const pinCooling = useMemo(() => {
+    if (!pin) return null;
+    const n = nearestCooling(city, pin);
+    return {
+      name: n.point.name,
+      label: COOLING_LABEL[n.point.kind],
+      icon: COOLING_ICON[n.point.kind],
+      distanceKm: n.distanceKm,
+    };
+  }, [city, pin]);
+
+  // Advisory re-issued at every whole hour (typewriter re-runs on change).
+  const wholeHour = Math.floor(hour);
+  const advisory = useMemo(
+    () => generateAdvisory(city, wholeHour, cityRisks(city, wholeHour)),
+    [city, wholeHour]
   );
 
   // ── Threshold alerts + banners ──────────────────────────────────────
@@ -234,12 +255,19 @@ export default function Home() {
         )}
       </div>
 
-      <div className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-3 sm:right-5 sm:top-5">
+      <div className="absolute right-3 top-3 z-[1000] flex max-h-[calc(100vh-110px)] flex-col items-end gap-3 overflow-y-auto sm:right-5 sm:top-5">
         <BulletinCard city={city} hour={hour} risks={risks} />
         <AlertLog alerts={alerts} onAck={acknowledge} />
+        <AdvisoryPanel advisory={advisory} hourLabel={formatHour(wholeHour)} />
       </div>
 
-      {pinRisk && <PointRiskCard risk={pinRisk} onClose={() => setPin(null)} />}
+      {pinRisk && pinCooling && (
+        <PointRiskCard
+          risk={pinRisk}
+          cooling={pinCooling}
+          onClose={() => setPin(null)}
+        />
+      )}
 
       <ControlBar
         hour={hour}
