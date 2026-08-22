@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Polygon, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { City } from "@/data/cities";
 import { hexagon } from "@/lib/geo";
-import { cityRisks, LEVEL_COLORS, type ZoneRisk } from "@/lib/heat";
+import {
+  cityRisks,
+  LEVEL_COLORS,
+  LEVEL_ORDER,
+  type RiskLevel,
+  type ZoneRisk,
+} from "@/lib/heat";
 
 export default function HeatMap({
   city,
@@ -32,6 +38,41 @@ export default function HeatMap({
     [city]
   );
 
+  // One-shot flash when a zone escalates a level (drives the CSS burst).
+  const prevLevelRef = useRef<Map<string, RiskLevel>>(new Map());
+  const [flashing, setFlashing] = useState<Set<string>>(new Set());
+  const flashTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const prev = prevLevelRef.current;
+    const escalated: string[] = [];
+    for (const r of risks) {
+      const before = prev.get(r.zone.id);
+      if (
+        before !== undefined &&
+        LEVEL_ORDER.indexOf(r.level) > LEVEL_ORDER.indexOf(before) &&
+        (r.level === "ALERT" || r.level === "CRITICAL")
+      )
+        escalated.push(r.zone.id);
+      prev.set(r.zone.id, r.level);
+    }
+    if (escalated.length === 0) return;
+    setFlashing((old) => new Set([...old, ...escalated]));
+    // Timer must survive effect re-runs (this effect fires every frame while playing).
+    flashTimersRef.current.push(
+      setTimeout(() => {
+        setFlashing((old) => {
+          const next = new Set(old);
+          escalated.forEach((id) => next.delete(id));
+          return next;
+        });
+      }, 1200)
+    );
+  }, [risks]);
+  useEffect(() => {
+    const timers = flashTimersRef.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
   return (
     <MapContainer
       center={[city.center.lat, city.center.lng]}
@@ -51,9 +92,15 @@ export default function HeatMap({
       {risks.map((r) => {
         const color = LEVEL_COLORS[r.level];
         const selected = r.zone.id === selectedZoneId;
+        const cls = [
+          r.level === "CRITICAL" ? "zone-critical" : "",
+          flashing.has(r.zone.id) ? "zone-flash" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
         return (
           <Polygon
-            key={r.zone.id}
+            key={`${r.zone.id}-${cls}`}
             positions={hexes.get(r.zone.id)!}
             eventHandlers={{ click: () => onZoneClick?.(r) }}
             pathOptions={{
@@ -63,7 +110,7 @@ export default function HeatMap({
               fillColor: color,
               // hotter = more opaque, so the choropleth "ignites" through the day
               fillOpacity: 0.12 + (r.hri / 100) * 0.5,
-              className: r.level === "CRITICAL" ? "zone-critical" : undefined,
+              className: cls || undefined,
             }}
           >
             <Tooltip sticky>
