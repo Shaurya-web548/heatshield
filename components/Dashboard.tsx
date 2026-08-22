@@ -154,12 +154,6 @@ export function ExplainCard({
       </div>
 
       <div className="mt-1.5 flex items-center justify-between border-t border-white/10 pt-1 text-[11px]">
-        <span className="text-neutral-300">HRI = Σ w · norm / Σ w</span>
-        <span className="font-mono font-semibold" style={{ color: LEVEL_COLORS[risk.level] }}>
-          {risk.hri}
-        </span>
-      </div>
-      <div className="flex items-center justify-between text-[11px]">
         <span className="text-neutral-400">Indicative feels-like on the street</span>
         <span className="font-mono text-orange-200">{risk.feelsLikeC.toFixed(1)} °C</span>
       </div>
