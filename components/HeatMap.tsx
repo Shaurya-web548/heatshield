@@ -116,7 +116,7 @@ export default function HeatMap({
       if (
         before !== undefined &&
         LEVEL_ORDER.indexOf(r.level) > LEVEL_ORDER.indexOf(before) &&
-        (r.level === "ALERT" || r.level === "CRITICAL")
+        (r.level === "HIGH" || r.level === "CRITICAL")
       )
         escalated.push(r.zone.id);
       prev.set(r.zone.id, r.level);

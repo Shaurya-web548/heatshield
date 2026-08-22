@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { HeatAlert } from "@/lib/alerts";
 import type { ZoneRisk } from "@/lib/heat";
 import { formatHour, LEVEL_COLORS } from "@/lib/heat";
 import {
@@ -9,6 +10,7 @@ import {
   nextStatus,
   recommendations,
   responseStats,
+  wardAnalytics,
   type Measure,
   type Ticket,
 } from "@/lib/response";
@@ -119,24 +121,29 @@ const STATUS_STYLE: Record<string, string> = {
 export function ResponseConsole({
   hour,
   risks,
+  alerts,
   tickets,
   officer,
   onDispatch,
   onAdvance,
   onExport,
+  onExportHistory,
   onReset,
 }: {
   hour: number;
   risks: ZoneRisk[];
+  alerts: HeatAlert[];
   tickets: Ticket[];
   officer: string;
   onDispatch: (risk: ZoneRisk, measure: Measure) => void;
-  onAdvance: (id: string) => void;
+  onAdvance: (id: string, notes?: string) => void;
   onExport: () => void;
+  onExportHistory: () => void;
   onReset: () => void;
 }) {
   const recs = recommendations(risks, tickets);
   const stats = responseStats(tickets);
+  const analytics = wardAnalytics(alerts, tickets, hour);
   const active = tickets.filter((t) => t.status !== "RESOLVED");
   const resolved = tickets.filter((t) => t.status === "RESOLVED");
   const trail = tickets
@@ -144,6 +151,7 @@ export function ResponseConsole({
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 6);
   const [measureFor, setMeasureFor] = useState<Record<string, Measure>>({});
+  const [notesFor, setNotesFor] = useState<Record<string, string>>({});
 
   return (
     <div>
@@ -174,13 +182,30 @@ export function ResponseConsole({
         ))}
       </div>
 
+      {/* Neglected zones */}
+      {analytics.neglected.length > 0 && (
+        <div className="mt-2 rounded-lg border border-red-400/30 bg-red-950/30 px-2 py-1.5 text-[11px]">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-red-300">
+            ⚠ Alerted, no response yet
+          </div>
+          {analytics.neglected.slice(0, 4).map((n) => (
+            <div key={n.zoneName} className="flex justify-between text-neutral-200">
+              <span className="truncate">{n.zoneName}</span>
+              <span className="font-mono text-neutral-400">
+                {n.level} · {n.sinceMin} min
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Recommended actions */}
       <div className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
         Recommended actions ({recs.length})
       </div>
       {recs.length === 0 ? (
         <div className="mt-1 text-[11px] text-neutral-500">
-          No zone above ALERT without an active response.
+          No zone above HIGH without an active response.
         </div>
       ) : (
         <div className="mt-1 max-h-40 space-y-1 overflow-y-auto pr-0.5">
@@ -237,12 +262,13 @@ export function ResponseConsole({
       <div className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
         Active tickets ({active.length})
       </div>
-      <div className="mt-1 max-h-44 space-y-1 overflow-y-auto pr-0.5">
+      <div className="mt-1 max-h-48 space-y-1 overflow-y-auto pr-0.5">
         {active.length === 0 && (
           <div className="text-[11px] text-neutral-500">None yet — dispatch from the list above.</div>
         )}
         {active.map((t) => {
           const nxt = nextStatus(t.status);
+          const resolving = nxt === "RESOLVED";
           return (
             <div key={t.id} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -251,6 +277,14 @@ export function ResponseConsole({
                 </span>
                 <span className="font-mono text-[10px] text-neutral-500">{t.id}</span>
               </div>
+              {resolving && (
+                <input
+                  value={notesFor[t.id] ?? ""}
+                  onChange={(e) => setNotesFor((n) => ({ ...n, [t.id]: e.target.value }))}
+                  placeholder="Outcome notes (e.g. 2,000 L distributed, 40 workers rested)"
+                  className="mt-1 w-full rounded-md border border-white/15 bg-black/50 px-2 py-1 text-[11px] text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-green-400/50"
+                />
+              )}
               <div className="mt-1 flex items-center justify-between gap-2">
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${STATUS_STYLE[t.status]}`}
@@ -259,7 +293,7 @@ export function ResponseConsole({
                 </span>
                 {nxt && (
                   <button
-                    onClick={() => onAdvance(t.id)}
+                    onClick={() => onAdvance(t.id, notesFor[t.id])}
                     className="rounded-md border border-white/20 px-2 py-0.5 text-[10px] font-semibold text-neutral-200 hover:bg-white/10"
                   >
                     → {nxt.replace("_", " ")}
@@ -270,6 +304,59 @@ export function ResponseConsole({
           );
         })}
       </div>
+
+      {/* Resolved with outcomes */}
+      {resolved.length > 0 && (
+        <>
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+            Resolved ({resolved.length})
+          </div>
+          <div className="mt-1 max-h-28 space-y-0.5 overflow-y-auto text-[10px]">
+            {[...resolved].reverse().map((t) => (
+              <div key={t.id} className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                <div className="flex justify-between gap-2 text-neutral-300">
+                  <span className="truncate">
+                    {MEASURES[t.measure].icon} {t.zoneName}
+                  </span>
+                  <span className="shrink-0 text-green-300">
+                    {t.riskAtResolve ? `risk now ${t.riskAtResolve}` : "resolved"}
+                  </span>
+                </div>
+                {t.outcomeNotes && (
+                  <div className="truncate text-neutral-500">“{t.outcomeNotes}”</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Ward analytics */}
+      {analytics.perZone.length > 0 && (
+        <>
+          <div className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+            Ward analytics
+          </div>
+          <div className="mt-1 grid grid-cols-[1fr_auto_auto_auto] gap-x-2 gap-y-0.5 text-[10px]">
+            <span className="text-neutral-500">zone</span>
+            <span className="text-right text-neutral-500">alerts</span>
+            <span className="text-right text-neutral-500">tickets</span>
+            <span className="text-right text-neutral-500">resp.</span>
+            {analytics.perZone.slice(0, 6).map((z) => (
+              <div key={z.zoneId} className="contents">
+                <span className="truncate text-neutral-300">{z.zoneName}</span>
+                <span className="text-right font-mono text-neutral-300">{z.alerts}</span>
+                <span className={`text-right font-mono ${z.tickets === 0 ? "text-red-300" : "text-neutral-300"}`}>
+                  {z.tickets}
+                </span>
+                <span className="text-right font-mono text-sky-300">
+                  {z.avgDispatchMin === null ? "—" : `${z.avgDispatchMin}m`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Accountability trail */}
       {trail.length > 0 && (
@@ -297,7 +384,13 @@ export function ResponseConsole({
           disabled={tickets.length === 0}
           className="flex-1 rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-neutral-200 hover:bg-white/10 disabled:opacity-40"
         >
-          ⬇ Export CSV ({tickets.length} tickets, {resolved.length} resolved)
+          ⬇ Response log CSV
+        </button>
+        <button
+          onClick={onExportHistory}
+          className="flex-1 rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-neutral-200 hover:bg-white/10"
+        >
+          ⬇ Readings CSV
         </button>
         <button
           onClick={onReset}
@@ -309,8 +402,8 @@ export function ResponseConsole({
         </button>
       </div>
       <p className="mt-1.5 text-[10px] leading-snug text-neutral-600">
-        Tickets persist in this browser. Simulated dispatch — no real units are
-        moved.
+        Tickets and hourly readings persist in this browser. Simulated dispatch
+        — no real units are moved.
       </p>
     </div>
   );

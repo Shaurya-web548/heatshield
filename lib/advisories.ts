@@ -44,7 +44,7 @@ export function generateAdvisory(
 ): Advisory {
   const h = Math.floor(hour);
   const critical = risks.filter((r) => r.level === "CRITICAL");
-  const alert = risks.filter((r) => r.level === "ALERT");
+  const alert = risks.filter((r) => r.level === "HIGH");
   const top = risks[0];
   const temp = airTempC(city, h, p);
   const cooling = nearestCooling(city, top.zone.center).point;
@@ -57,7 +57,7 @@ export function generateAdvisory(
     critical.length > 0
       ? `${critical.length} zone${critical.length > 1 ? "s" : ""} critical — stop outdoor work`
       : alert.length > 0
-        ? `Heat alert in ${alert.length} zone${alert.length > 1 ? "s" : ""} — limit exposure`
+        ? `High heat risk in ${alert.length} zone${alert.length > 1 ? "s" : ""} — limit exposure`
         : h < 11
           ? `${city.imd.level} day ahead — plan work before noon`
           : `Heat easing — resume with care`;
@@ -83,10 +83,10 @@ export function generateAdvisory(
   } else if (alert.length > 0) {
     const names = alert.slice(0, 3).map((r) => r.zone.name);
     en.push(
-      `Heat is at alert level in ${listEn(names)}${alert.length > 3 ? ` and ${alert.length - 3} more zones` : ""}. Limit outdoor work to essentials and take a shade break every 30 minutes.`
+      `Heat risk is HIGH in ${listEn(names)}${alert.length > 3 ? ` and ${alert.length - 3} more zones` : ""}. Limit outdoor work to essentials and take a shade break every 30 minutes.`
     );
     hi.push(
-      `${listHi(names)}${alert.length > 3 ? ` और ${alert.length - 3} अन्य क्षेत्रों` : ""} में गर्मी अलर्ट स्तर पर है। बाहर का काम केवल ज़रूरी कामों तक सीमित रखें और हर 30 मिनट में छाया में विश्राम करें।`
+      `${listHi(names)}${alert.length > 3 ? ` और ${alert.length - 3} अन्य क्षेत्रों` : ""} में गर्मी का जोखिम उच्च स्तर पर है। बाहर का काम केवल ज़रूरी कामों तक सीमित रखें और हर 30 मिनट में छाया में विश्राम करें।`
     );
   } else if (h < 11) {
     en.push(

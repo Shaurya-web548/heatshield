@@ -1,6 +1,14 @@
-// Localized Heat-Risk Index (HRI). Deliberately simple and explainable:
-// IMD heat index (air temp + humidity) + urban surface adjustments + exposure.
-// A communication/decision-support model, not a meteorological one.
+// Risk engine: weighted-composite Heat-Risk Index (0–100).
+//
+//   HRI = Σ wᵢ · nᵢ / Σ wᵢ, each factor nᵢ normalized to 0–100:
+//     heat index (IMD temp + humidity), land-surface temp (satellite),
+//     tree-cover deficit, built-up density, traffic density,
+//     outdoor-worker exposure (optional weight, default 0).
+//
+// Default weights follow the submission design (0.30 / 0.20 / 0.20 / 0.15 /
+// 0.15) and are configurable from the UI — "weights adjustable on
+// expert/municipal input". Bands: Low 0–40 · Moderate 41–60 · High 61–80 ·
+// Critical 81–100. A decision-support model, not a meteorological one.
 
 import type { City, Zone, ZoneFactors } from "@/data/cities";
 import { distanceKm, type LatLng } from "@/lib/geo";
@@ -8,36 +16,81 @@ import { distanceKm, type LatLng } from "@/lib/geo";
 export const DAY_START = 6; // 06:00
 export const DAY_END = 20; // 20:00
 
-export type RiskLevel = "NORMAL" | "WATCH" | "ALERT" | "CRITICAL";
+export type RiskLevel = "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
 
-export const LEVEL_ORDER: RiskLevel[] = ["NORMAL", "WATCH", "ALERT", "CRITICAL"];
+export const LEVEL_ORDER: RiskLevel[] = ["LOW", "MODERATE", "HIGH", "CRITICAL"];
 
 export const LEVEL_COLORS: Record<RiskLevel, string> = {
-  NORMAL: "#22c55e",
-  WATCH: "#eab308",
-  ALERT: "#f97316",
+  LOW: "#22c55e",
+  MODERATE: "#eab308",
+  HIGH: "#f97316",
   CRITICAL: "#ef4444",
 };
 
-export const THRESHOLDS = { WATCH: 40, ALERT: 60, CRITICAL: 80 };
+/** Band lower bounds (inclusive): 0–40 Low, 41–60 Moderate, 61–80 High, 81–100 Critical. */
+export const THRESHOLDS = { MODERATE: 41, HIGH: 61, CRITICAL: 81 };
 
-/** What-if planning parameters (defaults = the IMD snapshot, no greening). */
+export const levelFor = (hri: number): RiskLevel =>
+  hri >= THRESHOLDS.CRITICAL
+    ? "CRITICAL"
+    : hri >= THRESHOLDS.HIGH
+      ? "HIGH"
+      : hri >= THRESHOLDS.MODERATE
+        ? "MODERATE"
+        : "LOW";
+
+export type FactorKey =
+  | "heatIndex"
+  | "lst"
+  | "treeDeficit"
+  | "builtUp"
+  | "traffic"
+  | "workers";
+
+export type Weights = Record<FactorKey, number>;
+
+export const DEFAULT_WEIGHTS: Weights = {
+  heatIndex: 0.3,
+  lst: 0.2,
+  treeDeficit: 0.2,
+  builtUp: 0.15,
+  traffic: 0.15,
+  workers: 0,
+};
+
+export const FACTOR_LABELS: Record<FactorKey, string> = {
+  heatIndex: "Heat index (IMD temp + humidity)",
+  lst: "Land-surface temperature (satellite)",
+  treeDeficit: "Tree-cover deficit (100 − NDVI cover)",
+  builtUp: "Built-up density",
+  traffic: "Traffic density index",
+  workers: "Outdoor-worker exposure",
+};
+
+/** What-if planning parameters + configurable weights. */
 export type SimParams = {
   tempDeltaC: number; // shift applied to IMD Tmax/Tmin
   humidityDeltaPct: number; // shift applied to morning RH
   greening: Record<string, number>; // zoneId -> added tree-cover fraction
+  weights: Weights;
 };
 
 export const DEFAULT_PARAMS: SimParams = {
   tempDeltaC: 0,
   humidityDeltaPct: 0,
   greening: {},
+  weights: DEFAULT_WEIGHTS,
 };
 
 export const isWhatIfActive = (p: SimParams) =>
   p.tempDeltaC !== 0 ||
   p.humidityDeltaPct !== 0 ||
   Object.values(p.greening).some((g) => g > 0);
+
+export const areWeightsCustom = (p: SimParams) =>
+  (Object.keys(DEFAULT_WEIGHTS) as FactorKey[]).some(
+    (k) => Math.abs(p.weights[k] - DEFAULT_WEIGHTS[k]) > 1e-9
+  );
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
@@ -89,30 +142,69 @@ export function heatIndexC(tC: number, rh: number): number {
   return ((HI - 32) * 5) / 9;
 }
 
-export type HriFactor = { label: string; value: string; delta: number };
+/** Apply what-if greening to a zone's factors (more canopy, less sealed surface). */
+function effectiveZone(zoneIn: Zone, p: SimParams): Zone {
+  const extra = p.greening[zoneIn.id] ?? 0;
+  if (extra <= 0) return zoneIn;
+  return {
+    ...zoneIn,
+    factors: {
+      ...zoneIn.factors,
+      treeCover: clamp(zoneIn.factors.treeCover + extra, 0, 0.9),
+      surface: clamp(zoneIn.factors.surface - extra * 0.5, 0, 1),
+    },
+    statics: {
+      ...zoneIn.statics,
+      lstOffsetC: Math.max(2, zoneIn.statics.lstOffsetC - extra * 20),
+    },
+  };
+}
+
+/**
+ * Land-surface temperature (°C): the satellite-style reading for the zone,
+ * air temperature plus a surface offset that scales with solar heating.
+ */
+export function landSurfaceTempC(
+  city: City,
+  zone: Zone,
+  hour: number,
+  p: SimParams = DEFAULT_PARAMS
+): number {
+  const z = effectiveZone(zone, p);
+  return airTempC(city, hour, p) + z.statics.lstOffsetC * dayProfile(hour);
+}
+
+export type HriFactor = {
+  key: FactorKey;
+  label: string;
+  value: string; // raw reading for display
+  normalized: number; // 0–100
+  weight: number;
+  points: number; // contribution to HRI
+};
 
 export type ZoneRisk = {
   zone: Zone;
   hri: number;
   level: RiskLevel;
   airTempC: number;
-  feelsLikeC: number; // localized feels-like after urban adjustments
+  heatIndexC: number; // city-wide feels-like
+  feelsLikeC: number; // indicative localized feels-like (display only)
+  lstC: number;
   factors: HriFactor[];
 };
 
-/**
- * Urban adjustments (°C) on top of the city-wide heat index. Surfaces and
- * built-up mass heat through the day (profile-weighted); trees cool.
- */
-function urbanDeltas(zone: Zone, hour: number) {
-  const p = dayProfile(hour);
+/** Indicative localized feels-like for display: heat index + urban deltas. */
+function localizedFeelsLike(base: number, zone: Zone, hour: number): number {
+  const pr = dayProfile(hour);
   const f = zone.factors;
-  return {
-    builtUp: 3.5 * f.builtUp * (0.6 + 0.4 * p),
-    surface: 2.5 * f.surface * p,
-    traffic: 1.5 * f.traffic * p,
-    trees: -3.0 * f.treeCover * (0.5 + 0.5 * p),
-  };
+  return (
+    base +
+    3.5 * f.builtUp * (0.6 + 0.4 * pr) +
+    2.5 * f.surface * pr +
+    1.5 * f.traffic * pr -
+    3.0 * f.treeCover * (0.5 + 0.5 * pr)
+  );
 }
 
 export function zoneRisk(
@@ -121,54 +213,60 @@ export function zoneRisk(
   hour: number,
   p: SimParams = DEFAULT_PARAMS
 ): ZoneRisk {
-  const extra = p.greening[zoneIn.id] ?? 0;
-  const zone: Zone =
-    extra > 0
-      ? {
-          ...zoneIn,
-          factors: {
-            ...zoneIn.factors,
-            treeCover: clamp(zoneIn.factors.treeCover + extra, 0, 0.9),
-            surface: clamp(zoneIn.factors.surface - extra * 0.5, 0, 1),
-          },
-        }
-      : zoneIn;
+  const zone = effectiveZone(zoneIn, p);
   const t = airTempC(city, hour, p);
   const rh = humidityPct(city, hour, p);
-  const base = heatIndexC(t, rh);
-  const d = urbanDeltas(zone, hour);
-  const feelsLike = base + d.builtUp + d.surface + d.traffic + d.trees;
+  const hi = heatIndexC(t, rh);
+  const lst = landSurfaceTempC(city, zoneIn, hour, p);
 
-  // 33 °C feels-like -> 0, 52 °C -> 100; exposure adds up to +12 points.
-  const thermal = clamp(((feelsLike - 33) / 19) * 100, 0, 100);
-  const exposure = 12 * zone.factors.workers;
-  const hri = Math.round(clamp(thermal * 0.9 + exposure, 0, 100));
+  // Normalize every input to 0–100.
+  const n: Record<FactorKey, number> = {
+    heatIndex: clamp(((hi - 30) / 20) * 100, 0, 100), // 30 °C → 0, 50 °C → 100
+    lst: clamp(((lst - 30) / 30) * 100, 0, 100), // 30 °C → 0, 60 °C → 100
+    treeDeficit: (1 - zone.factors.treeCover) * 100,
+    builtUp: zone.factors.builtUp * 100,
+    traffic: zone.factors.traffic * 100,
+    workers: zone.factors.workers * 100,
+  };
+  const raw: Record<FactorKey, string> = {
+    heatIndex: `${hi.toFixed(1)} °C`,
+    lst: `${lst.toFixed(1)} °C`,
+    treeDeficit: `${Math.round(zone.factors.treeCover * 100)}% cover`,
+    builtUp: `${Math.round(zone.factors.builtUp * 100)}%`,
+    traffic: `${Math.round(zone.factors.traffic * 100)}%`,
+    workers: `${Math.round(zone.factors.workers * 100)}%`,
+  };
 
-  const level: RiskLevel =
-    hri >= THRESHOLDS.CRITICAL
-      ? "CRITICAL"
-      : hri >= THRESHOLDS.ALERT
-        ? "ALERT"
-        : hri >= THRESHOLDS.WATCH
-          ? "WATCH"
-          : "NORMAL";
+  const w = p.weights;
+  const wSum = (Object.keys(w) as FactorKey[]).reduce((s, k) => s + w[k], 0) || 1;
+  const factors: HriFactor[] = (Object.keys(DEFAULT_WEIGHTS) as FactorKey[]).map(
+    (k) => ({
+      key: k,
+      label: FACTOR_LABELS[k],
+      value: raw[k],
+      normalized: Math.round(n[k]),
+      weight: w[k],
+      points: (w[k] * n[k]) / wSum,
+    })
+  );
+  const hri = Math.round(clamp(factors.reduce((s, f) => s + f.points, 0), 0, 100));
 
-  const factors: HriFactor[] = [
-    { label: "IMD air temperature", value: `${t.toFixed(1)} °C`, delta: 0 },
-    { label: "Humidity (heat index)", value: `${rh.toFixed(0)}%`, delta: base - t },
-    { label: "Built-up density", value: `${Math.round(zone.factors.builtUp * 100)}%`, delta: d.builtUp },
-    { label: "Concrete / asphalt surface", value: `${Math.round(zone.factors.surface * 100)}%`, delta: d.surface },
-    { label: "Traffic density", value: `${Math.round(zone.factors.traffic * 100)}%`, delta: d.traffic },
-    { label: "Tree cover", value: `${Math.round(zone.factors.treeCover * 100)}%`, delta: d.trees },
-  ];
-
-  return { zone, hri, level, airTempC: t, feelsLikeC: feelsLike, factors };
+  return {
+    zone,
+    hri,
+    level: levelFor(hri),
+    airTempC: t,
+    heatIndexC: hi,
+    feelsLikeC: localizedFeelsLike(hi, zone, hour),
+    lstC: lst,
+    factors,
+  };
 }
 
 /**
- * Risk at an arbitrary point: blend the urban factors of the three nearest
- * zones by inverse-distance weighting, then score like a zone. Lets a vendor
- * or traffic constable check their exact spot.
+ * Risk at an arbitrary point: blend the three nearest zones by inverse
+ * distance, then score like a zone. Lets a vendor or traffic constable
+ * check their exact spot.
  */
 export function pointRisk(
   city: City,
@@ -185,6 +283,9 @@ export function pointRisk(
   const blend = (key: keyof ZoneFactors) =>
     ranked.reduce((s, { zone }, i) => s + zone.factors[key] * weights[i], 0) /
     total;
+  const blendStatic = (key: "lstOffsetC") =>
+    ranked.reduce((s, { zone }, i) => s + zone.statics[key] * weights[i], 0) /
+    total;
   const synthetic: Zone = {
     id: "point",
     name: `Point near ${ranked[0].zone.name}`,
@@ -198,6 +299,7 @@ export function pointRisk(
       surface: blend("surface"),
       workers: blend("workers"),
     },
+    statics: { ...ranked[0].zone.statics, lstOffsetC: blendStatic("lstOffsetC") },
   };
   return {
     ...zoneRisk(city, synthetic, hour, p),

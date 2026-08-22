@@ -1,23 +1,42 @@
-// Threshold-based alerts: one alert per zone per level reached, per day.
-// Escalations (→ ALERT, → CRITICAL) notify authorities; de-escalations are
-// logged only. Pure functions so the page effect stays tiny.
+// Threshold-based alerts.
+//   Trigger: a zone crosses into HIGH or CRITICAL.
+//   Recipients: role-based routing (ward officer, health centre, traffic control).
+//   De-dup: one alert per zone per level per day.
+//   Escalation: CRITICAL unanswered for 2 h → next authority tier.
 
 import { LEVEL_ORDER, type RiskLevel, type ZoneRisk } from "@/lib/heat";
 
+export type Recipient = "Ward officer" | "Local health centre" | "Traffic control room";
+
 export type HeatAlert = {
-  id: string; // `${zoneId}:${level}`
+  id: string; // `${zoneId}:${level}` (or `${zoneId}:ESC`)
   hour: number;
   zoneId: string;
   zoneName: string;
   level: RiskLevel;
   hri: number;
+  recipients: Recipient[];
   acknowledged: boolean;
   ackHour?: number;
+  escalated?: boolean; // auto-escalated to the next tier
+  escalatedTo?: string;
+  escalatedHour?: number;
 };
 
-export const NOTIFY_LEVELS: RiskLevel[] = ["ALERT", "CRITICAL"];
+export const NOTIFY_LEVELS: RiskLevel[] = ["HIGH", "CRITICAL"];
+export const ESCALATE_AFTER_HOURS = 2;
+export const ESCALATION_TIER = "Zonal Deputy Commissioner";
 
 const rank = (l: RiskLevel) => LEVEL_ORDER.indexOf(l);
+
+/** Role-based routing: who gets this alert. */
+export function recipientsFor(r: ZoneRisk, level: RiskLevel): Recipient[] {
+  const out: Recipient[] = ["Ward officer"];
+  if (level === "CRITICAL" || r.zone.statics.informalSettlementPct >= 25)
+    out.push("Local health centre");
+  if (r.zone.factors.traffic >= 0.7) out.push("Traffic control room");
+  return out;
+}
 
 /**
  * Diff previous vs current levels. Returns new alerts for escalations into
@@ -47,6 +66,7 @@ export function detectEscalations(
               zoneName: r.zone.name,
               level: l,
               hri: r.hri,
+              recipients: recipientsFor(r, l),
               acknowledged: false,
             });
           }
@@ -58,9 +78,32 @@ export function detectEscalations(
 }
 
 /**
- * One banner per level, naming up to three zones — many zones cross a
- * threshold within seconds of sim-time, so per-zone banners would stack.
+ * CRITICAL alerts with no acknowledgement and no response ticket for
+ * ESCALATE_AFTER_HOURS while the zone is still critical → escalate once.
  */
+export function detectOverdue(
+  alerts: HeatAlert[],
+  risks: ZoneRisk[],
+  hour: number,
+  zonesWithResponse: Set<string>
+): string[] {
+  const stillCritical = new Set(
+    risks.filter((r) => r.level === "CRITICAL").map((r) => r.zone.id)
+  );
+  return alerts
+    .filter(
+      (a) =>
+        a.level === "CRITICAL" &&
+        !a.acknowledged &&
+        !a.escalated &&
+        !zonesWithResponse.has(a.zoneId) &&
+        stillCritical.has(a.zoneId) &&
+        hour - a.hour >= ESCALATE_AFTER_HOURS
+    )
+    .map((a) => a.id);
+}
+
+/** One banner per level, naming up to three zones. */
 export function alertBanners(fresh: HeatAlert[]): string[] {
   const out: string[] = [];
   for (const level of [...NOTIFY_LEVELS].reverse()) {
@@ -71,11 +114,11 @@ export function alertBanners(fresh: HeatAlert[]): string[] {
     out.push(
       level === "CRITICAL"
         ? names.length === 1
-          ? `🔥 ${shown} is now CRITICAL — ward officer notified`
+          ? `🔥 ${shown} is now CRITICAL — ward officer and health centre notified`
           : `🔥 ${names.length} zones now CRITICAL: ${shown}${more} — ward officers notified`
         : names.length === 1
-          ? `⚠ ${shown} has reached ALERT`
-          : `⚠ ${names.length} zones reached ALERT: ${shown}${more}`
+          ? `⚠ ${shown} has reached HIGH heat risk`
+          : `⚠ ${names.length} zones reached HIGH: ${shown}${more}`
     );
   }
   return out;

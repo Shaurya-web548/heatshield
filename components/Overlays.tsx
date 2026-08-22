@@ -80,18 +80,20 @@ export function BulletinCard({
   hour,
   risks,
   params = DEFAULT_PARAMS,
+  lastUpdated,
 }: {
   city: City;
   hour: number;
   risks: ZoneRisk[];
   params?: SimParams;
+  lastUpdated?: string;
 }) {
   const [open, toggle] = useDefaultCollapsedOnMobile();
   const counts = {
     CRITICAL: risks.filter((r) => r.level === "CRITICAL").length,
-    ALERT: risks.filter((r) => r.level === "ALERT").length,
-    WATCH: risks.filter((r) => r.level === "WATCH").length,
-    NORMAL: risks.filter((r) => r.level === "NORMAL").length,
+    HIGH: risks.filter((r) => r.level === "HIGH").length,
+    MODERATE: risks.filter((r) => r.level === "MODERATE").length,
+    LOW: risks.filter((r) => r.level === "LOW").length,
   };
   return (
     <motion.div
@@ -115,7 +117,7 @@ export function BulletinCard({
       </div>
       {!open && (
         <div className="mt-0.5 font-mono text-xs tabular-nums text-orange-300">
-          {airTempC(city, hour, params).toFixed(0)} °C · {counts.CRITICAL} crit · {counts.ALERT} alert
+          {airTempC(city, hour, params).toFixed(0)} °C · {counts.CRITICAL} crit · {counts.HIGH} high
         </div>
       )}
       <div className={open ? "block" : "hidden"}>
@@ -144,7 +146,7 @@ export function BulletinCard({
         <span className="text-right text-sky-200">{city.imd.windKmh} km/h</span>
       </div>
       <div className="mt-2 flex gap-1.5 border-t border-white/10 pt-2 text-[11px] font-semibold">
-        {(["CRITICAL", "ALERT", "WATCH", "NORMAL"] as const).map((l) => (
+        {(["CRITICAL", "HIGH", "MODERATE", "LOW"] as const).map((l) => (
           <span
             key={l}
             className="flex-1 rounded-md py-0.5 text-center"
@@ -160,10 +162,15 @@ export function BulletinCard({
       </div>
       <div className="mt-0.5 flex gap-1.5 text-[9px] uppercase tracking-wider text-neutral-500">
         <span className="flex-1 text-center">crit</span>
-        <span className="flex-1 text-center">alert</span>
-        <span className="flex-1 text-center">watch</span>
-        <span className="flex-1 text-center">ok</span>
+        <span className="flex-1 text-center">high</span>
+        <span className="flex-1 text-center">mod</span>
+        <span className="flex-1 text-center">low</span>
       </div>
+      {lastUpdated && (
+        <div className="mt-1.5 border-t border-white/10 pt-1 text-[9px] text-neutral-500">
+          last_updated {lastUpdated}
+        </div>
+      )}
       </div>
     </motion.div>
   );
