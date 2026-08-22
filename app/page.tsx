@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import ControlBar, { type PlayState } from "@/components/ControlBar";
+import { TitleChip, BulletinCard } from "@/components/Overlays";
 import { cities, defaultCity } from "@/data/cities";
+import { cityRisks, DAY_START, type ZoneRisk } from "@/lib/heat";
 
 // Leaflet touches `window` at module scope — it must never run during SSR.
 const HeatMap = dynamic(() => import("@/components/HeatMap"), {
@@ -16,41 +19,50 @@ const HeatMap = dynamic(() => import("@/components/HeatMap"), {
 
 export default function Home() {
   const [city, setCity] = useState(defaultCity);
+  const [hour, setHour] = useState(DAY_START);
+  const [playState, setPlayState] = useState<PlayState>("idle");
+  const [selected, setSelected] = useState<ZoneRisk | null>(null);
+
+  const risks = useMemo(() => cityRisks(city, hour), [city, hour]);
+
+  const handleCityChange = useCallback((id: string) => {
+    const next = cities.find((c) => c.id === id);
+    if (!next) return;
+    setCity(next);
+    setHour(DAY_START);
+    setPlayState("idle");
+    setSelected(null);
+  }, []);
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#0b0a0f]">
       {/* key remounts the map per city for a clean reset */}
-      <HeatMap key={city.id} city={city} />
+      <HeatMap
+        key={city.id}
+        city={city}
+        hour={hour}
+        selectedZoneId={selected?.zone.id ?? null}
+        onZoneClick={setSelected}
+      />
 
       <div className="vignette z-[900]" />
       <div className="film-grain z-[901]" />
 
-      <div className="absolute left-3 top-3 z-[1000] sm:left-5 sm:top-5">
-        <div className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 shadow-xl backdrop-blur-md sm:px-4 sm:py-2.5">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <span className="text-base font-semibold tracking-wide sm:text-lg">
-              🌡️ HeatShield
-            </span>
-            <select
-              value={city.id}
-              onChange={(e) =>
-                setCity(cities.find((c) => c.id === e.target.value) ?? defaultCity)
-              }
-              aria-label="City"
-              className="rounded-md border border-white/15 bg-black/60 px-2 py-1 text-xs text-neutral-200 outline-none hover:border-white/30"
-            >
-              {cities.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mt-0.5 text-xs text-neutral-400">
-            Simplified heat-index model · IMD snapshot data
-          </div>
-        </div>
+      <TitleChip city={city} onCityChange={handleCityChange} />
+
+      <div className="absolute right-3 top-3 z-[1000] flex flex-col items-end gap-3 sm:right-5 sm:top-5">
+        <BulletinCard city={city} hour={hour} risks={risks} />
       </div>
+
+      <ControlBar
+        hour={hour}
+        playState={playState}
+        onScrub={(h) => {
+          setHour(h);
+          setPlayState("idle");
+        }}
+        onPlay={() => setPlayState((s) => (s === "playing" ? "idle" : "playing"))}
+      />
     </main>
   );
 }
