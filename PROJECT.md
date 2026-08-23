@@ -45,16 +45,17 @@ official ward boundaries.
 
 1. **Landing page** — embers drift toward the cursor; "See the hotspots
    before they become incidents." Click *Continue as resident / worker*.
-2. **Hotspot dashboard** — Ahmedabad at the 14:30 IST observation: the old
-   city and industrial belts are red, tree-rich Bopal is lowest. Click
-   Kalupur → the factors beneath its score: heat index +20, surface temp
-   +19, tree deficit +19, built-up +14, traffic +11 = 84 CRITICAL. Click
-   Bopal — same IMD number, 20 points apart.
+2. **Hotspot dashboard** — Delhi at the 14:30 IST observation: the old city
+   and the industrial east are red, the tree-covered Central Ridge is lowest.
+   Click Chandni Chowk → the factors beneath its score: heat index +18,
+   surface temp +20, tree deficit +19, built-up +15, traffic +12 = 84
+   CRITICAL. Click Central Ridge — same IMD number, 37 points apart. Switch
+   to Ahmedabad from the title chip for the 2013 Heat Action Plan story.
 3. **📐 Heat-Risk Index** — the formula, the weights, the normalization, and
    every zone's score with factor bars beneath it.
-4. Click a street on the map: the HRI card on the right switches to that spot —
-   its factors, "Limit outdoor work… nearest relief: Kalupur station water
-   kiosk". Toggle हिन्दी on the advisory.
+4. Click a street beside Chandni Chowk: the HRI card on the right switches to
+   that spot — 83 CRITICAL, its factors, "Stop outdoor work… nearest relief:
+   Chandni Chowk water kiosk, 0.6 km". Toggle हिन्दी on the advisory.
 5. **🔔 Threshold alerts** — each High/Critical zone with who was notified
    (ward officer, health centre, traffic control).
 6. **🛡️ Response tracking** — as a resident: "no relief dispatched yet for

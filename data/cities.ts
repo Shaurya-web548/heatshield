@@ -195,7 +195,8 @@ export const cities: City[] = [
   },
 ];
 
-export const defaultCity = cities[0];
+/** The dashboard opens on Delhi; Ahmedabad stays in the city switcher. */
+export const defaultCity = cities.find((c) => c.id === "delhi") ?? cities[0];
 
 /** Hexagon area, km². */
 export const zoneAreaKm2 = (zone: Zone) => 2.598 * zone.radiusKm * zone.radiusKm;

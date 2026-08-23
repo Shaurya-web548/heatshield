@@ -93,6 +93,13 @@ export function AuthModal({
               placeholder="••••••••"
               className="mt-1 w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-400/50"
             />
+            <p className="mt-1.5 text-[11px] text-neutral-400">
+              Prototype access code:{" "}
+              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono font-semibold text-amber-200">
+                {ACCESS_CODE}
+              </span>{" "}
+              — shown here on purpose so anyone reviewing the demo can sign in.
+            </p>
             {error && <p className="mt-2 text-xs font-medium text-red-400">{error}</p>}
             <button
               onClick={submit}

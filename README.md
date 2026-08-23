@@ -119,6 +119,18 @@ there — everything else works.
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript · Tailwind 4 · react-leaflet 5 /
-Leaflet 1.9 (CartoDB dark tiles) · framer-motion. Geometry is ~50 lines in
-`lib/geo.ts`; the model is `lib/heat.ts`.
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 15.5 (App Router, static export for GitHub Pages) · React 19 |
+| Language | TypeScript 5 (strict) |
+| Styling | Tailwind CSS 4 + a small hand-written CSS layer (heat haze, labels, glows) |
+| Map | react-leaflet 5 / Leaflet 1.9 · CARTO dark basemap tiles · hexagon zones drawn as polygons |
+| Motion | framer-motion 13 (panels, count-ups, bars) · canvas embers on the landing page |
+| Model | Pure TypeScript in `lib/heat.ts` (weighted composite, Rothfusz heat index) · geometry in `lib/geo.ts` |
+| Data | Hard-coded IMD / satellite / GIS / traffic snapshots in `data/cities.ts`, adapters in `lib/ingest.ts` |
+| Persistence | Browser localStorage (tickets, hourly readings) · sessionStorage (officer sign-in) · CSV export |
+| Optional AI | Gemini via `app/api/advise` for the live advisory — silent fallback to the generated one |
+| Tooling | ESLint 9 (next config) · `tsc --noEmit` · GitHub Actions → GitHub Pages |
+
+No backend, no database, no accounts — everything runs in the browser so the
+prototype can be opened from a static link.
