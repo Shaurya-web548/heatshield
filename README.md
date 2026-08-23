@@ -30,9 +30,9 @@ Open http://localhost:3000.
      IMD observation time (14:30 IST), ranked hotspot table, the factors
      beneath any zone's score, a full zone table with CSV, and the risk at
      any street you click.
-  2. **📐 Heat-Risk Index** — the formula and weights, how each input is
-     normalized, the bands, and the city's index with factor bars beneath
-     every zone's score.
+  2. **📐 Heat-Risk Index** — the bands and every zone's score with the
+     factors beneath it (readings, not arithmetic — the method lives in this
+     README and `lib/heat.ts`).
   3. **🔔 Threshold alerts** — every zone in the High/Critical band with its
      role-based recipients; authorities acknowledge.
   4. **🛡️ Response tracking** — residents pick their zone and see the alert,
@@ -83,8 +83,8 @@ HRI = 0.30 × heat index (IMD temp + humidity; 30 °C → 0 … 50 °C → 100)
 Every factor is normalized to 0–100 before weighting; the weights live in
 `DEFAULT_WEIGHTS` in `lib/heat.ts` (one place to adjust on expert / municipal
 input) and are normalized by their sum. Bands: Low 0–40 · Moderate 41–60 · High 61–80 · Critical 81–100. The
-explainability card shows each factor's reading, normalized value, weight and
-points. Weights can be tuned later against ward-level heatstroke case data.
+explainability card shows each factor's reading and a bar for how strongly it
+pushes the score; the arithmetic stays in code. Weights can be tuned later against ward-level heatstroke case data.
 
 Supporting curves: air temperature follows a diurnal curve between the
 bulletin's Tmin and Tmax (peak ~15:00); humidity falls as the air heats; LST is

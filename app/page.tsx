@@ -101,7 +101,7 @@ export default function Landing() {
           transition={{ duration: 0.9, delay: 0.3 }}
           className="mt-5 max-w-2xl text-sm leading-relaxed text-neutral-300 sm:text-base"
         >
-          IMD says the city is 44 °C. A concrete market street with no trees and
+          IMD says the city is 45 °C. A concrete market street with no trees and
           heavy traffic feels 50 °C. HeatShield turns the city bulletin into a
           ward-level Heat-Risk Index so municipal authorities can act on emerging
           hotspots — and so the street vendor, traffic constable and delivery

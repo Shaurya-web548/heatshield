@@ -47,12 +47,12 @@ official ward boundaries.
    before they become incidents." Click *Continue as resident / worker*.
 2. **Hotspot dashboard** — Delhi at the 14:30 IST observation: the old city
    and the industrial east are red, the tree-covered Central Ridge is lowest.
-   Click Chandni Chowk → the factors beneath its score: heat index +18,
-   surface temp +20, tree deficit +19, built-up +15, traffic +12 = 84
-   CRITICAL. Click Central Ridge — same IMD number, 37 points apart. Switch
-   to Ahmedabad from the title chip for the 2013 Heat Action Plan story.
-3. **📐 Heat-Risk Index** — the formula, the weights, the normalization, and
-   every zone's score with factor bars beneath it.
+   Click Chandni Chowk → 84 CRITICAL and the factors beneath it: 4 % tree
+   cover, 97 % built-up, 80 % traffic, surface 60 °C. Click Central Ridge —
+   same IMD number, 37 points apart. Switch to Ahmedabad from the title chip
+   for the 2013 Heat Action Plan story.
+3. **📐 Heat-Risk Index** — the bands and every zone's score with the
+   factors beneath it.
 4. Click a street beside Chandni Chowk: the HRI card on the right switches to
    that spot — 83 CRITICAL, its factors, "Stop outdoor work… nearest relief:
    Chandni Chowk water kiosk, 0.6 km". Toggle हिन्दी on the advisory.

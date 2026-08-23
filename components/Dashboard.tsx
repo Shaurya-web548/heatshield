@@ -110,6 +110,9 @@ export type PointContext = {
   cooling: { name: string; label: string; icon: string; distanceKm: number };
 };
 
+/** "W-21" → "Ward W-21"; "Ward 74" and "NDMC" are already labels. */
+const wardLabel = (w: string) => (/^(ward|ndmc)/i.test(w) ? w : `Ward ${w}`);
+
 /** Advice for someone standing there right now. */
 function workerAdvice(level: string) {
   if (level === "CRITICAL")
@@ -122,7 +125,7 @@ function workerAdvice(level: string) {
 }
 
 /**
- * "Why is this zone HIGH?" — weighted-composite breakdown. With `point` set it
+ * "Why is this zone HIGH?" — the score and the factors behind it. With `point` set it
  * explains a spot clicked on the map instead of a zone, so one card on the
  * right always answers "what is the HRI of the thing I just clicked?".
  */
@@ -175,14 +178,8 @@ export function ExplainCard({
         </div>
       )}
 
-      <div className="mt-1.5 grid grid-cols-[1fr_auto_auto_auto] gap-x-2 gap-y-0.5 text-[10px]">
-        <span className="text-neutral-500">factor · reading</span>
-        <span className="text-right text-neutral-500">norm</span>
-        <span className="text-right text-neutral-500">w</span>
-        <span className="text-right text-neutral-500">pts</span>
-        {risk.factors.map((f, i) => (
-          <FactorRow key={f.key} index={i} label={f.label} value={f.value} normalized={f.normalized} weight={f.weight} points={f.points} />
-        ))}
+      <div className="mt-2">
+        <FactorBars risk={risk} />
       </div>
 
       <div className="mt-1.5 flex items-center justify-between border-t border-white/10 pt-1 text-[11px]">
@@ -210,52 +207,30 @@ export function ExplainCard({
       <div className="mt-1.5 text-[10px] leading-snug text-neutral-500">
         Bands: Low 0–{THRESHOLDS.MODERATE - 1} · Moderate {THRESHOLDS.MODERATE}–
         {THRESHOLDS.HIGH - 1} · High {THRESHOLDS.HIGH}–{THRESHOLDS.CRITICAL - 1} ·
-        Critical {THRESHOLDS.CRITICAL}+. Full method in the 📐 Heat-Risk Index section.
+        Critical {THRESHOLDS.CRITICAL}+.
         {risk.zone.population > 0 &&
-          ` Ward ${risk.zone.statics.wardNumber}, population ${risk.zone.population.toLocaleString("en-IN")}.`}
+          ` ${wardLabel(risk.zone.statics.wardNumber)}, population ${risk.zone.population.toLocaleString("en-IN")}.`}
       </div>
     </motion.div>
   );
 }
 
-function FactorRow({
-  index,
-  label,
-  value,
-  normalized,
-  weight,
-  points,
-}: {
-  index: number;
-  label: string;
-  value: string;
-  normalized: number;
-  weight: number;
-  points: number;
-}) {
-  const muted = weight === 0;
-  const cell = (content: React.ReactNode, cls: string) => (
-    <motion.span
-      initial={{ opacity: 0, x: 6 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ ...FAST, delay: 0.05 + index * 0.05 }}
-      className={cls}
-    >
-      {content}
-    </motion.span>
-  );
+/** The factors behind a score: what was read in the zone, and how strongly it pushes the index. */
+export function FactorBars({ risk, compact = false }: { risk: ZoneRisk; compact?: boolean }) {
   return (
-    <>
-      {cell(
-        <>
-          {label.replace(/ \(.*\)$/, "")} <span className="text-neutral-600">{value}</span>
-        </>,
-        `truncate ${muted ? "text-neutral-600" : "text-neutral-400"}`
-      )}
-      {cell(normalized, `text-right font-mono ${muted ? "text-neutral-600" : "text-neutral-300"}`)}
-      {cell(weight.toFixed(2), `text-right font-mono ${muted ? "text-neutral-600" : "text-sky-300"}`)}
-      {cell(points > 0 ? `+${points.toFixed(1)}` : "—", `text-right font-mono ${muted ? "text-neutral-600" : "text-orange-300"}`)}
-    </>
+    <div className={`space-y-0.5 ${compact ? "text-[10px]" : "text-[11px]"}`}>
+      {risk.factors
+        .filter((f) => f.weight > 0)
+        .map((f, i) => (
+          <div key={f.key} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2">
+            <span className="truncate text-neutral-400" title={f.label}>
+              {f.label.replace(/ \(.*\)$/, "")}
+            </span>
+            <GrowBar pct={f.normalized} color={LEVEL_COLORS[risk.level]} height={6} delay={0.05 + i * 0.04} />
+            <span className="font-mono text-neutral-300">{f.value}</span>
+          </div>
+        ))}
+    </div>
   );
 }
 
@@ -281,7 +256,7 @@ export function ZoneTable({
           onClick={onExport}
           className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-neutral-300 transition hover:bg-white/10"
         >
-          ⬇ CSV
+          ⬇️ CSV
         </button>
       </div>
       <div className="max-h-[42vh] overflow-auto rounded-lg border border-white/10">

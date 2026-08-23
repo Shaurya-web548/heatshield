@@ -117,8 +117,8 @@ export function alertBanners(fresh: HeatAlert[]): string[] {
           ? `🔥 ${shown} is now CRITICAL — ward officer and health centre notified`
           : `🔥 ${names.length} zones now CRITICAL: ${shown}${more} — ward officers notified`
         : names.length === 1
-          ? `⚠ ${shown} has reached HIGH heat risk`
-          : `⚠ ${names.length} zones reached HIGH: ${shown}${more}`
+          ? `⚠️ ${shown} has reached HIGH heat risk`
+          : `⚠️ ${names.length} zones reached HIGH: ${shown}${more}`
     );
   }
   return out;

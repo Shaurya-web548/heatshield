@@ -3,18 +3,10 @@
 import { motion } from "framer-motion";
 import type { City } from "@/data/cities";
 import type { HeatAlert } from "@/lib/alerts";
-import {
-  DEFAULT_WEIGHTS,
-  FACTOR_LABELS,
-  LEVEL_COLORS,
-  THRESHOLDS,
-  formatHour,
-  type FactorKey,
-  type ZoneRisk,
-} from "@/lib/heat";
+import { LEVEL_COLORS, THRESHOLDS, formatHour, type ZoneRisk } from "@/lib/heat";
 import { MEASURES, STATUS_FLOW, type Ticket } from "@/lib/response";
-import { LevelBadge } from "@/components/Dashboard";
-import { GrowBar, FAST } from "@/components/Motion";
+import { LevelBadge, FactorBars } from "@/components/Dashboard";
+import { FAST } from "@/components/Motion";
 
 export type View = "hotspots" | "hri" | "alerts" | "response";
 
@@ -62,39 +54,7 @@ export function SectionNav({
   );
 }
 
-const NORMALIZATION: Record<FactorKey, string> = {
-  heatIndex: "30 °C → 0 · 50 °C → 100",
-  lst: "30 °C → 0 · 60 °C → 100",
-  treeDeficit: "100 − tree cover %",
-  builtUp: "built-up %",
-  traffic: "traffic index × 100",
-  workers: "worker density × 100",
-};
-
-/** The factor bars shown beneath an HRI. */
-export function FactorBars({ risk, compact = false }: { risk: ZoneRisk; compact?: boolean }) {
-  const max = Math.max(...risk.factors.map((f) => f.points), 1);
-  return (
-    <div className={`space-y-0.5 ${compact ? "text-[10px]" : "text-[11px]"}`}>
-      {risk.factors
-        .filter((f) => f.weight > 0)
-        .map((f) => (
-          <div key={f.key} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-2">
-            <span className="truncate text-neutral-400" title={f.label}>
-              {f.label.replace(/ \(.*\)$/, "")}
-            </span>
-            <GrowBar pct={(f.points / max) * 100} color={LEVEL_COLORS[risk.level]} height={6} />
-            <span className="font-mono text-neutral-300">
-              <span className="text-neutral-500">{f.value} · n{f.normalized} × {f.weight.toFixed(2)} = </span>
-              +{f.points.toFixed(1)}
-            </span>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-/** Section: how the HRI is calculated + the city's risk index with factors beneath each score. */
+/** Section: the city's Heat-Risk Index, every zone's score with the factors beneath it. */
 export function HriSection({
   city,
   risks,
@@ -110,40 +70,15 @@ export function HriSection({
     <div className="space-y-3">
       <div>
         <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          📐 How the Heat-Risk Index is calculated
-        </div>
-        <div className="mt-1.5 rounded-lg border border-white/10 bg-white/5 p-2.5 font-mono text-[11px] leading-relaxed text-neutral-200">
-          HRI = Σ wᵢ · nᵢ / Σ wᵢ
-          <div className="mt-1 space-y-0.5 text-[10px] text-neutral-400">
-            {(Object.keys(DEFAULT_WEIGHTS) as FactorKey[])
-              .filter((k) => DEFAULT_WEIGHTS[k] > 0)
-              .map((k) => (
-                <div key={k} className="grid grid-cols-[2.2rem_1fr] gap-2">
-                  <span className="text-sky-300">{DEFAULT_WEIGHTS[k].toFixed(2)}</span>
-                  <span>
-                    <span className="text-neutral-200">{FACTOR_LABELS[k].replace(/ \(.*\)$/, "")}</span>
-                    <span className="text-neutral-500"> · {NORMALIZATION[k]}</span>
-                  </span>
-                </div>
-              ))}
-          </div>
+          📐 Heat-Risk Index · {city.name} · observed {formatHour(hour)} IST
         </div>
         <div className="mt-1.5 text-[10px] leading-snug text-neutral-500">
-          Every input is normalized to 0–100 and weighted. The heat index uses
-          the Rothfusz formula on the IMD air temperature and humidity; land-
-          surface temperature is the satellite reading for the zone; tree cover,
-          built-up and traffic come from the GIS/satellite snapshot.
-          <br />
-          Bands: <span className="text-green-300">Low 0–{THRESHOLDS.MODERATE - 1}</span> ·{" "}
+          One 0–100 score per zone from the IMD bulletin, satellite surface
+          temperature, tree cover, built-up density and traffic. Bands:{" "}
+          <span className="text-green-300">Low 0–{THRESHOLDS.MODERATE - 1}</span> ·{" "}
           <span className="text-yellow-300">Moderate {THRESHOLDS.MODERATE}–{THRESHOLDS.HIGH - 1}</span> ·{" "}
           <span className="text-orange-300">High {THRESHOLDS.HIGH}–{THRESHOLDS.CRITICAL - 1}</span> ·{" "}
           <span className="text-red-300">Critical {THRESHOLDS.CRITICAL}–100</span>.
-        </div>
-      </div>
-
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          Risk index · {city.name} · observed {formatHour(hour)} IST
         </div>
         <div className="mt-1.5 space-y-1.5">
           {risks.map((r, i) => (

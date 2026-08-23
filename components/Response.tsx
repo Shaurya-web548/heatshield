@@ -15,7 +15,8 @@ import {
   type Ticket,
 } from "@/lib/response";
 
-// Demo credential — documented in the README, deliberately not shown on screen.
+// Demo credential — documented in the README and printed under the field, so
+// anyone reviewing the prototype can sign in.
 const ACCESS_CODE = "HEAT-1070";
 
 export function AuthModal({
@@ -193,7 +194,7 @@ export function ResponseConsole({
       {analytics.neglected.length > 0 && (
         <div className="mt-2 rounded-lg border border-red-400/30 bg-red-950/30 px-2 py-1.5 text-[11px]">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-red-300">
-            ⚠ Alerted, no response yet
+            ⚠️ Alerted, no response yet
           </div>
           {analytics.neglected.slice(0, 4).map((n) => (
             <div key={n.zoneName} className="flex justify-between text-neutral-200">
@@ -400,13 +401,13 @@ export function ResponseConsole({
           disabled={tickets.length === 0}
           className="flex-1 rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-neutral-200 hover:bg-white/10 disabled:opacity-40"
         >
-          ⬇ Response log CSV
+          ⬇️ Response log CSV
         </button>
         <button
           onClick={onExportHistory}
           className="flex-1 rounded-lg border border-white/15 py-1.5 text-[11px] font-semibold text-neutral-200 hover:bg-white/10"
         >
-          ⬇ Readings CSV
+          ⬇️ Readings CSV
         </button>
         <button
           onClick={onReset}

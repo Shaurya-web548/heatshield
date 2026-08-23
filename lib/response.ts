@@ -17,10 +17,10 @@ export type Measure =
 
 export const MEASURES: Record<Measure, { label: string; icon: string }> = {
   water_tanker: { label: "Water tanker", icon: "🚚" },
-  shade_tent: { label: "Shade tent", icon: "⛺" },
+  shade_tent: { label: "Shade tent", icon: "⛱️" },
   ors_kiosk: { label: "ORS kiosk", icon: "🧂" },
   cooling_centre: { label: "Open cooling centre", icon: "❄️" },
-  work_hours: { label: "Work-hours advisory", icon: "📣" },
+  work_hours: { label: "Work-hours advisory", icon: "📢" },
 };
 
 export type TicketStatus = "OPEN" | "DISPATCHED" | "ON_SITE" | "RESOLVED";
