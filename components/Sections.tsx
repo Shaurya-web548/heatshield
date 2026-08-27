@@ -7,14 +7,24 @@ import { LEVEL_COLORS, THRESHOLDS, formatHour, type ZoneRisk } from "@/lib/heat"
 import { MEASURES, STATUS_FLOW, type Ticket } from "@/lib/response";
 import { LevelBadge, FactorBars } from "@/components/Dashboard";
 import { FAST } from "@/components/Motion";
+import {
+  FlameIcon,
+  RulerIcon,
+  BellIcon,
+  ShieldIcon,
+  HomeIcon,
+  TownHallIcon,
+  HospitalIcon,
+  TrafficIcon,
+} from "@/components/ClassicIcons";
 
 export type View = "hotspots" | "hri" | "alerts" | "response";
 
-export const VIEWS: { id: View; label: string; short: string }[] = [
-  { id: "hotspots", label: "🔥 Hotspot dashboard", short: "🔥" },
-  { id: "hri", label: "📐 Heat-Risk Index", short: "📐" },
-  { id: "alerts", label: "🔔 Threshold alerts", short: "🔔" },
-  { id: "response", label: "🛡️ Response tracking", short: "🛡️" },
+export const VIEWS: { id: View; label: string; short: React.ReactNode }[] = [
+  { id: "hotspots", label: "Hotspot dashboard", short: <FlameIcon size={14} /> },
+  { id: "hri", label: "Heat-Risk Index", short: <RulerIcon size={14} /> },
+  { id: "alerts", label: "Threshold alerts", short: <BellIcon size={14} /> },
+  { id: "response", label: "Response tracking", short: <ShieldIcon size={14} /> },
 ];
 
 export function SectionNav({
@@ -33,7 +43,7 @@ export function SectionNav({
           key={v.id}
           onClick={() => onView(v.id)}
           title={v.label}
-          className={`relative flex-1 py-1.5 font-semibold transition-colors ${
+          className={`relative flex-1 py-1.5 font-heading font-semibold transition-colors ${
             view === v.id ? "text-white" : "text-neutral-400 hover:bg-white/10"
           }`}
         >
@@ -46,8 +56,8 @@ export function SectionNav({
               }`}
             />
           )}
-          <span className="relative sm:hidden">{v.short}</span>
-          <span className="relative hidden sm:inline">{v.label.replace(/^\S+\s/, "")}</span>
+          <span className="relative flex items-center justify-center sm:hidden">{v.short}</span>
+          <span className="relative hidden sm:inline">{v.label}</span>
         </button>
       ))}
     </div>
@@ -69,8 +79,9 @@ export function HriSection({
   return (
     <div className="space-y-3">
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          📐 Heat-Risk Index · {city.name} · observed {formatHour(hour)} IST
+        <div className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+          <RulerIcon size={13} className="icon-classic text-orange-400" />
+          <span>Heat-Risk Index · {city.name} · observed {formatHour(hour)} IST</span>
         </div>
         <div className="mt-1.5 text-[10px] leading-snug text-neutral-500">
           One 0–100 score per zone from the IMD bulletin, satellite surface
@@ -90,10 +101,10 @@ export function HriSection({
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.985 }}
               onClick={() => onSelect(r)}
-              className="block w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left transition-colors hover:bg-white/10"
+              className="block w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-left transition-colors hover:bg-white/10 hover:shadow-[0_0_12px_-3px_rgba(249,115,22,0.2)]"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-medium text-neutral-100">
+                <span className="truncate text-xs font-heading font-medium text-neutral-100">
                   {r.zone.name}
                   <span className="ml-1 text-[10px] text-neutral-500">{r.zone.statics.wardNumber}</span>
                 </span>
@@ -122,10 +133,10 @@ export function HriSection({
   );
 }
 
-const RECIPIENT_ICON: Record<string, string> = {
-  "Ward officer": "🏛️",
-  "Local health centre": "🏥",
-  "Traffic control room": "🚦",
+const RECIPIENT_ICON: Record<string, React.ReactNode> = {
+  "Ward officer": <TownHallIcon size={13} className="icon-classic text-amber-400" />,
+  "Local health centre": <HospitalIcon size={13} className="icon-classic text-red-400" />,
+  "Traffic control room": <TrafficIcon size={13} className="icon-classic text-yellow-400" />,
 };
 
 /** Section: threshold-based alerts. */
@@ -142,8 +153,9 @@ export function AlertsSection({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          🔔 Threshold-based alerts
+        <span className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+          <BellIcon size={13} className="icon-classic text-orange-400" />
+          <span>Threshold-based alerts</span>
         </span>
         {open > 0 && (
           <span className="rounded-full bg-red-500/25 px-2 py-0.5 text-[10px] font-bold text-red-300">
@@ -155,8 +167,10 @@ export function AlertsSection({
         <span className="text-neutral-200">Trigger:</span> a zone enters the{" "}
         <span className="text-orange-300">High (≥{THRESHOLDS.HIGH})</span> or{" "}
         <span className="text-red-300">Critical (≥{THRESHOLDS.CRITICAL})</span> band.{" "}
-        <span className="text-neutral-200">Routing:</span> 🏛️ ward officer always · 🏥
-        health centre for Critical or ≥25 % informal settlement · 🚦 traffic control
+        <span className="text-neutral-200">Routing:</span>{" "}
+        <span className="inline-flex items-center gap-0.5"><TownHallIcon size={10} className="icon-classic text-amber-400" /> ward officer</span> always ·{" "}
+        <span className="inline-flex items-center gap-0.5"><HospitalIcon size={10} className="icon-classic text-red-400" /> health centre</span> for Critical or ≥25 % informal settlement ·{" "}
+        <span className="inline-flex items-center gap-0.5"><TrafficIcon size={10} className="icon-classic text-yellow-400" /> traffic control</span>{" "}
         where traffic ≥0.7. <span className="text-neutral-200">De-dup:</span> one alert per
         zone per level per day. <span className="text-neutral-200">Escalation:</span> Critical
         unanswered for 2 h → Zonal Deputy Commissioner.
@@ -176,7 +190,7 @@ export function AlertsSection({
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium text-neutral-100">{a.zoneName}</span>
+                <span className="truncate font-heading font-medium text-neutral-100">{a.zoneName}</span>
                 <span
                   className="rounded px-1.5 py-0.5 text-[10px] font-bold"
                   style={{ background: `${LEVEL_COLORS[a.level]}26`, color: LEVEL_COLORS[a.level] }}
@@ -185,8 +199,12 @@ export function AlertsSection({
                 </span>
               </div>
               <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-neutral-500">
-                <span title={a.recipients.join(", ")}>
-                  {formatHour(a.hour)} → {a.recipients.map((r) => RECIPIENT_ICON[r] ?? "•").join(" ")}{" "}
+                <span className="flex items-center gap-1" title={a.recipients.join(", ")}>
+                  {formatHour(a.hour)} → {a.recipients.map((r) => (
+                    <span key={r} className="inline-flex items-center gap-0.5 mr-1">
+                      {RECIPIENT_ICON[r] ?? "•"}{" "}
+                    </span>
+                  ))}
                   {a.recipients.join(", ")} · SMS (simulated)
                 </span>
               </div>
@@ -245,8 +263,9 @@ export function ResidentResponse({
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-          🏠 Relief status for my zone
+        <span className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+          <HomeIcon size={13} className="icon-classic text-orange-400" />
+          <span>Relief status for my zone</span>
         </span>
         <select
           value={risk.zone.id}
@@ -271,7 +290,10 @@ export function ResidentResponse({
 
       {/* Step 1: alert */}
       <div className="mt-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-[11px]">
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">1 · Alert</div>
+        <div className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+          <BellIcon size={11} className="icon-classic text-orange-400" />
+          <span>1 · Alert</span>
+        </div>
         {latestAlert ? (
           <div className="mt-0.5 text-neutral-200">
             {latestAlert.level} alert raised {formatHour(latestAlert.hour)} →{" "}
@@ -289,7 +311,10 @@ export function ResidentResponse({
 
       {/* Step 2–4: tickets */}
       <div className="mt-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-[11px]">
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">2 · Relief on the way</div>
+        <div className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+          <ShieldIcon size={11} className="icon-classic text-amber-400" />
+          <span>2 · Relief on the way</span>
+        </div>
         {zoneTickets.length === 0 ? (
           <div className="mt-0.5 text-neutral-400">
             No relief measure dispatched yet for {risk.zone.name}.
@@ -301,7 +326,7 @@ export function ResidentResponse({
               return (
                 <div key={t.id}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-neutral-100">
+                    <span className="font-heading font-medium text-neutral-100">
                       {MEASURES[t.measure].icon} {MEASURES[t.measure].label}
                     </span>
                     <span className="font-mono text-[10px] text-neutral-500">{t.id}</span>
@@ -329,7 +354,7 @@ export function ResidentResponse({
                     })}
                   </ol>
                   {t.outcomeNotes && (
-                    <div className="mt-1 text-[10px] text-neutral-400">Outcome: “{t.outcomeNotes}”</div>
+                    <div className="mt-1 text-[10px] text-neutral-400">Outcome: &ldquo;{t.outcomeNotes}&rdquo;</div>
                   )}
                 </div>
               );

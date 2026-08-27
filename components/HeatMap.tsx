@@ -15,7 +15,6 @@ import "leaflet/dist/leaflet.css";
 import {
   type City,
   type CoolingKind,
-  COOLING_ICON,
   COOLING_LABEL,
 } from "@/data/cities";
 import { hexagon, type LatLng } from "@/lib/geo";
@@ -28,6 +27,7 @@ import {
   type SimParams,
   type ZoneRisk,
 } from "@/lib/heat";
+import { PIN_SVG, COOLING_SVG } from "@/components/ClassicIcons";
 
 export type MapFocus = { lat: number; lng: number; nonce: number } | null;
 
@@ -37,7 +37,7 @@ const LABEL_MARGIN = 120;
 
 const pinIcon = L.divIcon({
   className: "",
-  html: '<div class="risk-pin">📍</div>',
+  html: `<div class="risk-pin">${PIN_SVG}</div>`,
   iconSize: [26, 26],
   iconAnchor: [13, 24],
 });
@@ -71,7 +71,7 @@ function textWidth(text: string, fontPx: number) {
   const cached = widthCache.get(key);
   if (cached !== undefined) return cached;
   measureCtx ??= document.createElement("canvas").getContext("2d");
-  if (measureCtx) measureCtx.font = `700 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+  if (measureCtx) measureCtx.font = `700 ${fontPx}px "Playfair Display", Georgia, serif`;
   // The extra term is the 0.04em letter-spacing; 0.62em/char is the fallback
   // when no canvas context is available.
   const width = measureCtx
@@ -81,13 +81,20 @@ function textWidth(text: string, fontPx: number) {
   return width;
 }
 
+const COOLING_ICON_NAMES: Record<CoolingKind, string> = {
+  water: "Droplet",
+  shade: "Umbrella",
+  ors: "Salt",
+  centre: "Snowflake",
+};
+
 const coolingIcons = new Map<CoolingKind, L.DivIcon>();
 function coolingIcon(kind: CoolingKind) {
   let icon = coolingIcons.get(kind);
   if (!icon) {
     icon = L.divIcon({
       className: "",
-      html: `<div class="cool-dot">${COOLING_ICON[kind]}</div>`,
+      html: `<div class="cool-dot">${COOLING_SVG[kind]}</div>`,
       iconSize: [22, 22],
       iconAnchor: [11, 11],
     });
@@ -196,12 +203,6 @@ function ZoneLabels({
   );
 }
 
-function ClickCatcher({ onClick }: { onClick: (p: LatLng) => void }) {
-  useMapEvents({
-    click: (e) => onClick({ lat: e.latlng.lat, lng: e.latlng.lng }),
-  });
-  return null;
-}
 
 function FocusFly({ focus }: { focus: MapFocus }) {
   const map = useMap();
@@ -223,6 +224,27 @@ function IntroFly({ target, zoom }: { target: [number, number]; zoom: number }) 
     const t = setTimeout(() => map.flyTo(target, zoom, { duration: 1.8 }), 300);
     return () => clearTimeout(t);
   }, [map, target, zoom]);
+  return null;
+}
+
+/** Ripple effect on zone or map click */
+function ClickRipple({ onClick }: { onClick: (p: LatLng) => void }) {
+  const map = useMap();
+  useMapEvents({
+    click: (e) => {
+      onClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+      // Add a ripple DOM element at the click point
+      const container = map.getContainer();
+      const point = map.latLngToContainerPoint(e.latlng);
+      const ripple = document.createElement("div");
+      ripple.className = "map-ripple";
+      ripple.style.left = `${point.x}px`;
+      ripple.style.top = `${point.y}px`;
+      ripple.style.zIndex = "470";
+      container.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 800);
+    },
+  });
   return null;
 }
 
@@ -308,7 +330,7 @@ export default function HeatMap({
       style={{ background: "#0b0a0f" }}
     >
       <IntroFly target={[city.center.lat, city.center.lng]} zoom={city.zoom} />
-      <ClickCatcher onClick={onMapClick} />
+      <ClickRipple onClick={onMapClick} />
       <FocusFly focus={focus} />
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -351,7 +373,7 @@ export default function HeatMap({
             }}
           >
             <Tooltip sticky>
-              <span className="font-semibold">{r.zone.name}</span> — HRI{" "}
+              <span className="font-heading font-semibold">{r.zone.name}</span> — HRI{" "}
               {r.hri} · {r.level} · feels like {r.feelsLikeC.toFixed(0)} °C
             </Tooltip>
           </Polygon>
@@ -375,7 +397,7 @@ export default function HeatMap({
           eventHandlers={{ click: (e) => L.DomEvent.stopPropagation(e) }}
         >
           <Tooltip direction="top" offset={[0, -10]}>
-            {COOLING_ICON[p.kind]} {p.name} · {COOLING_LABEL[p.kind]}
+            <span className="font-heading">{COOLING_ICON_NAMES[p.kind]}</span> · {p.name} · {COOLING_LABEL[p.kind]}
           </Tooltip>
         </Marker>
       ))}

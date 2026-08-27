@@ -9,6 +9,12 @@ import {
   type ZoneRisk,
 } from "@/lib/heat";
 import { CountUp, GrowBar, FAST, pressable } from "@/components/Motion";
+import {
+  FlameIcon,
+  PinIcon,
+  ClipboardIcon,
+  DownloadIcon,
+} from "@/components/ClassicIcons";
 
 const LEVEL_STYLES: Record<string, string> = {
   LOW: "bg-green-500/20 text-green-300 border-green-400/40",
@@ -24,7 +30,7 @@ export function LevelBadge({ level }: { level: string }) {
       initial={{ scale: 0.85, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={FAST}
-      className={`inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${LEVEL_STYLES[level]}`}
+      className={`inline-block rounded-md border px-1.5 py-0.5 font-heading text-[10px] font-bold tracking-wider ${LEVEL_STYLES[level]}`}
     >
       {level}
     </motion.span>
@@ -50,7 +56,10 @@ export function HotspotTable({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-        <span>🔥 Hotspot ranking · {formatHour(hour)}</span>
+        <span className="flex items-center gap-1.5 section-heading">
+          <FlameIcon size={13} className="icon-classic text-orange-400" />
+          <span>Hotspot ranking · {formatHour(hour)}</span>
+        </span>
         <span className="normal-case tracking-normal text-neutral-500">
           HRI 0–100
         </span>
@@ -73,7 +82,7 @@ export function HotspotTable({
               onMouseLeave={() => onHover?.(null)}
               className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors ${
                 active
-                  ? "border-white/40 bg-white/15"
+                  ? "border-white/40 bg-white/15 shadow-[0_0_12px_-3px_rgba(249,115,22,0.2)]"
                   : hover
                     ? "border-white/25 bg-white/10"
                     : "border-white/10 bg-white/5 hover:bg-white/10"
@@ -83,7 +92,7 @@ export function HotspotTable({
                 {i + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-medium text-neutral-100">
+                <span className="block truncate text-xs font-heading font-medium text-neutral-100">
                   {r.zone.name}
                   <span className="ml-1 text-[10px] text-neutral-500">
                     {r.zone.statics.wardNumber}
@@ -148,10 +157,15 @@ export function ExplainCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-            {point
-              ? "📍 Heat risk at this spot"
-              : `Why is ${risk.zone.name} ${risk.level}?`}
+          <div className="flex items-center gap-1.5 section-heading text-[10px] uppercase tracking-widest text-neutral-400">
+            {point ? (
+              <>
+                <PinIcon size={12} className="icon-classic text-amber-400" />
+                <span>Heat risk at this spot</span>
+              </>
+            ) : (
+              <span>Why is {risk.zone.name} {risk.level}?</span>
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-2">
             <CountUp
@@ -251,12 +265,16 @@ export function ZoneTable({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-        <span>📋 Zone table · {formatHour(hour)}</span>
+        <span className="flex items-center gap-1.5 section-heading">
+          <ClipboardIcon size={13} className="icon-classic text-orange-400" />
+          <span>Zone table · {formatHour(hour)}</span>
+        </span>
         <button
           onClick={onExport}
-          className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-neutral-300 transition hover:bg-white/10"
+          className="flex items-center gap-1 rounded border border-white/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-neutral-300 transition hover:bg-white/10"
         >
-          ⬇️ CSV
+          <DownloadIcon size={11} className="icon-classic" />
+          CSV
         </button>
       </div>
       <div className="max-h-[42vh] overflow-auto rounded-lg border border-white/10">
@@ -264,7 +282,7 @@ export function ZoneTable({
           <thead className="sticky top-0 bg-neutral-900/95 text-left text-neutral-400">
             <tr>
               {["zone", "ward", "HRI", "level", "air °C", "LST °C", "tree%", "built%", "traffic", "workers", "pop/km²", "informal%", "health km", "shelters", "water"].map((h) => (
-                <th key={h} className="whitespace-nowrap px-1.5 py-1 font-semibold">{h}</th>
+                <th key={h} className="whitespace-nowrap px-1.5 py-1 font-heading font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
@@ -282,7 +300,7 @@ export function ZoneTable({
                   onClick={() => onSelect(r)}
                   className="cursor-pointer border-t border-white/5 text-neutral-300 transition-colors hover:bg-white/10"
                 >
-                  <td className="whitespace-nowrap px-1.5 py-1 text-neutral-100">{r.zone.name}</td>
+                  <td className="whitespace-nowrap px-1.5 py-1 font-heading text-neutral-100">{r.zone.name}</td>
                   <td className="px-1.5 py-1 text-neutral-500">{s.wardNumber}</td>
                   <td className="px-1.5 py-1 font-bold" style={{ color: LEVEL_COLORS[r.level] }}>{r.hri}</td>
                   <td className="px-1.5 py-1" style={{ color: LEVEL_COLORS[r.level] }}>{r.level}</td>

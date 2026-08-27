@@ -3,6 +3,8 @@
 :root {
   --background: #0b0a0f;
   --foreground: #ededed;
+  --font-body: var(--font-crimson), "Crimson Text", Georgia, "Times New Roman", serif;
+  --font-heading: var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
 @theme inline {
@@ -18,20 +20,65 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   overflow-x: hidden;
 }
 
-/* Leaflet dark-theme polish */
+/* ── Classic typography utilities ── */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* ── Classic icon styling ── */
+.icon-classic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.icon-classic svg {
+  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.3));
+}
+
+/* ── Leaflet dark-theme polish ── */
 .leaflet-container {
   background: #0b0a0f;
-  font-family: inherit;
+  font-family: var(--font-body);
+}
+
+/* Heat shimmer overlay on the map */
+.leaflet-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 450;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.008) 0px,
+    rgba(255, 255, 255, 0) 3px,
+    rgba(255, 255, 255, 0) 6px
+  );
+  animation: map-shimmer-rise 8s linear infinite;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+@keyframes map-shimmer-rise {
+  from { background-position: 0 0; }
+  to { background-position: 0 -80px; }
 }
 
 .leaflet-control-attribution {
   background: rgba(11, 10, 15, 0.7) !important;
   color: #666 !important;
+  font-family: var(--font-body) !important;
 }
 
 .leaflet-control-attribution a {
@@ -68,6 +115,40 @@ body {
   100% { transform: translate(0, 0); }
 }
 
+/* ── Scanline sweep across map ── */
+.map-scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 460;
+  overflow: hidden;
+}
+
+.map-scanline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(249, 115, 22, 0.25) 20%,
+    rgba(251, 191, 36, 0.4) 50%,
+    rgba(249, 115, 22, 0.25) 80%,
+    transparent
+  );
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.3), 0 0 30px rgba(249, 115, 22, 0.15);
+  animation: scanline-sweep 6s ease-in-out infinite;
+}
+
+@keyframes scanline-sweep {
+  0%   { top: -4px; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
 /* Critical zones breathe */
 .zone-critical {
   animation: zone-pulse 1.8s ease-in-out infinite;
@@ -93,13 +174,30 @@ body {
 .risk-pin {
   font-size: 22px;
   line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
   animation: pin-drop 0.4s ease-out 1;
 }
 
 @keyframes pin-drop {
   0%   { transform: translateY(-14px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Click ripple on the map */
+.map-ripple {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(249, 115, 22, 0.6);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: map-ripple-expand 0.8s ease-out forwards;
+}
+
+@keyframes map-ripple-expand {
+  0%   { width: 0; height: 0; opacity: 1; border-width: 3px; }
+  100% { width: 120px; height: 120px; opacity: 0; border-width: 0.5px; }
 }
 
 /* Cooling points */
@@ -115,6 +213,12 @@ body {
   background: rgba(8, 47, 73, 0.9);
   border: 1.5px solid rgba(125, 211, 252, 0.7);
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+  animation: cool-breathe 3s ease-in-out infinite;
+}
+
+@keyframes cool-breathe {
+  0%, 100% { box-shadow: 0 0 6px rgba(56, 189, 248, 0.35); }
+  50%      { box-shadow: 0 0 14px rgba(56, 189, 248, 0.6); }
 }
 
 /* Municipal response mode frame */
@@ -185,6 +289,7 @@ body {
 }
 
 .heat-title {
+  font-family: var(--font-heading);
   text-shadow: 0 0 30px rgba(249, 115, 22, 0.35), 0 0 80px rgba(239, 68, 68, 0.2);
   animation: title-glow 3s ease-in-out infinite alternate;
 }
@@ -212,6 +317,11 @@ body {
   transition: fill-opacity 0.2s ease, stroke-width 0.2s ease;
 }
 
+/* Zone hover glow bloom */
+.leaflet-interactive:hover {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+}
+
 .coach-hint {
   animation: coach-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -226,7 +336,7 @@ body {
   .leaflet-interactive { transition: none; }
 }
 
-/* ── Zone labels on the map (landing-page heat theme) ── */
+/* ── Zone labels on the map (classic serif theme) ── */
 .zone-label {
   display: flex;
   flex-direction: column;
@@ -237,9 +347,10 @@ body {
 }
 
 .zone-label .zone-name {
+  font-family: var(--font-heading);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #ffd7b5;
   text-shadow:
@@ -249,7 +360,7 @@ body {
 }
 
 .zone-label .zone-hri {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 800;
   line-height: 1;
@@ -268,7 +379,98 @@ body {
 
 /* HRI numbers in panels */
 .hri-glow {
+  font-family: var(--font-heading);
   text-shadow: 0 0 12px currentColor, 0 0 28px rgba(249, 115, 22, 0.35);
+}
+
+/* ── Glassmorphism panels with breathing glow ── */
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  animation: panel-glow 4s ease-in-out infinite;
+}
+
+@keyframes panel-glow {
+  0%, 100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 0 0 0 rgba(249, 115, 22, 0);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 20px -4px rgba(249, 115, 22, 0.12);
+  }
+}
+
+/* ── Live indicator dot ── */
+.live-dot-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+.live-dot-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  animation: live-ring 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(0.8); }
+}
+
+@keyframes live-ring {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* ── Live clock styling ── */
+.live-clock {
+  font-family: var(--font-heading);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* ── Map heat particles canvas ── */
+.map-heat-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 455;
+  mix-blend-mode: screen;
+}
+
+/* ── Section heading serif ── */
+.section-heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 /* ── Phone: calmer map labels, bottom sheet ── */
@@ -277,6 +479,8 @@ body {
   .zone-label .zone-hri { font-size: 14px; }
   .zone-label.is-selected .zone-hri { font-size: 18px; }
   .cool-dot { width: 16px; height: 16px; font-size: 9px; }
+  .leaflet-container::after { opacity: 0.3; }
+  .map-scanline::after { opacity: 0.5; }
 }
 
 .sheet-handle {

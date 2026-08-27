@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { TitleChip, BulletinCard } from "@/components/Overlays";
 import { WarningBanners } from "@/components/Alerts";
@@ -47,6 +47,7 @@ import {
   type Ticket,
 } from "@/lib/response";
 import { loadHistory, recordHour, historyToCsv, clearHistory } from "@/lib/history";
+import { RulerIcon, LiveDot } from "@/components/ClassicIcons";
 
 // Leaflet touches `window` at module scope — it must never run during SSR.
 const HeatMap = dynamic(() => import("@/components/HeatMap"), {
@@ -73,6 +74,110 @@ function downloadCsv(name: string, csv: string) {
 }
 
 const VIEW_IDS: View[] = ["hotspots", "hri", "alerts", "response"];
+
+/** Lightweight heat particle canvas overlaid on the map for an alive feel. */
+function MapHeatParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+
+    let w = (canvas.width = canvas.offsetWidth);
+    let h = (canvas.height = canvas.offsetHeight);
+
+    type Particle = {
+      x: number; y: number; r: number; vy: number;
+      life: number; max: number; hue: number;
+    };
+    const particles: Particle[] = [];
+    const COUNT = Math.min(50, Math.floor((w * h) / 30000));
+
+    const spawn = (): Particle => ({
+      x: Math.random() * w,
+      y: h + Math.random() * 20,
+      r: 0.5 + Math.random() * 1.5,
+      vy: -(0.2 + Math.random() * 0.6),
+      life: 0,
+      max: 200 + Math.random() * 300,
+      hue: 15 + Math.random() * 35,
+    });
+    for (let i = 0; i < COUNT; i++) {
+      const p = spawn();
+      p.y = Math.random() * h;
+      p.life = Math.random() * p.max;
+      particles.push(p);
+    }
+
+    const onResize = () => {
+      w = canvas.width = canvas.offsetWidth;
+      h = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener("resize", onResize);
+
+    let raf = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (const p of particles) {
+        p.x += Math.sin((p.life + p.y) * 0.015) * 0.2;
+        p.y += p.vy;
+        p.life++;
+        const t = p.life / p.max;
+        const alpha = t < 0.1 ? t * 10 : t > 0.85 ? (1 - t) * 6.67 : 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${alpha * 0.5})`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `hsla(${p.hue}, 100%, 60%, ${alpha * 0.4})`;
+        ctx.fill();
+        if (p.life > p.max || p.y < -10) Object.assign(p, spawn());
+      }
+      ctx.shadowBlur = 0;
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="map-heat-canvas" />;
+}
+
+/** Live IST clock with pulsing dot */
+function LiveClock() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const tick = () => {
+      setTime(
+        new Date().toLocaleTimeString("en-IN", {
+          hour12: false,
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/70 px-2.5 py-1 text-[11px] backdrop-blur-md">
+      <LiveDot />
+      <span className="live-clock text-neutral-300">{time}</span>
+      <span className="text-[9px] text-neutral-500">IST</span>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const [city, setCity] = useState(defaultCity);
@@ -335,13 +440,20 @@ export default function DashboardPage() {
         }}
       />
 
+      {/* Interactive overlays on the map */}
+      <MapHeatParticles />
+      <div className="map-scanline" />
+
       <div className="vignette z-[900]" />
       <div className="film-grain z-[901]" />
       {isAuthority && (
         <>
           <div className="authority-frame z-[950]" />
-          <div className="absolute left-1/2 top-0 z-[1050] -translate-x-1/2 rounded-b-lg border border-t-0 border-amber-400/40 bg-amber-950/80 px-4 py-1 text-[11px] font-bold tracking-widest text-amber-300 backdrop-blur-md">
-            🛡️ MUNICIPAL RESPONSE MODE · {officer}
+          <div className="absolute left-1/2 top-0 z-[1050] -translate-x-1/2 rounded-b-lg border border-t-0 border-amber-400/40 bg-amber-950/80 px-4 py-1 text-[11px] font-heading font-bold tracking-widest text-amber-300 backdrop-blur-md">
+            <span className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+              MUNICIPAL RESPONSE MODE · {officer}
+            </span>
           </div>
         </>
       )}
@@ -361,6 +473,11 @@ export default function DashboardPage() {
         homeHref="/"
       />
       <WarningBanners banners={banners} />
+
+      {/* Live clock */}
+      <div className="absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2 sm:bottom-5">
+        <LiveClock />
+      </div>
 
       {coach && (
         <div className="coach-hint pointer-events-none absolute left-1/2 top-[34%] z-[1020] max-w-[90vw] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-4 py-2 text-center text-xs text-neutral-200 shadow-2xl backdrop-blur-md sm:top-[58%]">
@@ -404,7 +521,7 @@ export default function DashboardPage() {
                 onClick={() => setShowTable((v) => !v)}
                 className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] text-neutral-300 hover:bg-white/10"
               >
-                {showTable ? "🔥 Ranking" : "📋 Zone table"}
+                {showTable ? "Ranking" : "Zone table"}
               </button>
             </div>
             {showTable ? (
@@ -490,9 +607,10 @@ export default function DashboardPage() {
               />
               <button
                 onClick={() => setAuthOpen(true)}
-                className="mt-2.5 w-full rounded-lg border border-amber-400/40 py-1.5 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/15"
+                className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-400/40 py-1.5 text-[11px] font-heading font-semibold text-amber-300 hover:bg-amber-500/15"
               >
-                🛡️ Municipal officer? Sign in to dispatch relief
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+                Municipal officer? Sign in to dispatch relief
               </button>
             </>
           ))}
@@ -506,13 +624,16 @@ export default function DashboardPage() {
       >
         <BulletinCard city={city} hour={hour} risks={risks} lastUpdated={lastUpdated} />
         <div
-          className={`${hriOpen ? "w-72" : "w-auto"} max-w-[calc(100vw-1.5rem)] rounded-xl border border-white/10 bg-black/70 px-3 pb-2.5 pt-2.5 shadow-xl backdrop-blur-md`}
+          className={`${hriOpen ? "w-72" : "w-auto"} glass-panel max-w-[calc(100vw-1.5rem)] px-3 pb-2.5 pt-2.5`}
         >
           <button
             onClick={toggleHri}
-            className="flex w-full items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400"
+            className="flex w-full items-center justify-between gap-3 section-heading text-[10px] uppercase tracking-widest text-neutral-400"
           >
-            <span>📐 Heat-Risk Index · {focusLabel}</span>
+            <span className="flex items-center gap-1.5">
+              <RulerIcon size={12} className="icon-classic text-orange-400" />
+              Heat-Risk Index · {focusLabel}
+            </span>
             <span>{hriOpen ? "✕" : "▸"}</span>
           </button>
           {!hriOpen && (
@@ -553,4 +674,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-
