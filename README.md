@@ -1,4 +1,4 @@
-# 🌡️ HeatShield — Urban Heat Resilience
+.# 🌡️ HeatShield — Urban Heat Resilience
 
 Heat-risk identification and response for Indian cities: a localized
 Heat-Risk Index that combines IMD bulletin data with ward-level urban
