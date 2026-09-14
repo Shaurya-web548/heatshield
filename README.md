@@ -84,7 +84,7 @@ Every factor is normalized to 0–100 before weighting; the weights live in
 `DEFAULT_WEIGHTS` in `lib/heat.ts` (one place to adjust on expert / municipal
 input) and are normalized by their sum. Bands: Low 0–40 · Moderate 41–60 · High 61–80 · Critical 81–100. The
 explainability card shows each factor's reading and a bar for how strongly it
-pushes the score; the arithmetic stays in code. Weights can be tuned later against ward-level heatstroke case data.
+pushes the score; the arithmetic stays in code. Weights can be tuned later against ward-level heatstroke and case data.
 
 Supporting curves: air temperature follows a diurnal curve between the
 bulletin's Tmin and Tmax (peak ~15:00); humidity falls as the air heats; LST is
